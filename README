@@ -1,0 +1,38 @@
+######################################################
+# 
+# Fock space Hamiltonian truncation for phi^4 theory in 2 dimensions
+# Authors: Slava Rychkov (slava.rychkov@lpt.ens.fr) and Lorenzo Vitale (lorenzo.vitale@epfl.ch)
+# December 2014
+#
+######################################################
+
+This code was tested with Python 2.7.8 and Scipy 0.14.0
+
+EXAMPLE:
+
+Create and save to file the potential matrices, for L=6 and Emax=22:
+
+$ python genMatrix.py 6 22
+
+Calculate the spectrum for g=1, L=6 and Emax=20:
+
+$ python phi4eigs.py Emax=22.0_L=6.0.npz 1 20
+
+Expected output (IL):
+K=1 full basis size =  1733
+K=-1 full basis size =  1717
+K=1 basis size =  929
+K=-1 basis size =  918
+Computing raw eigenvalues for g4 =  1.0
+Raw vacuum energy:  -0.18712682052307628
+K=1 Raw spectrum:  [1.76304038 2.91903338]
+K=-1 Raw spectrum:  [0.77339277 2.93853034 4.20499236]
+Computing renormalized eigenvalues for g0r,g2r,g4r =  -0.008405611877365346 -0.031689185510771475 0.9857647792866683
+Adding subleading corrections to k=1  eigenvalues
+Adding subleading corrections to k=-1  eigenvalues
+Renlocal vacuum energy:  -0.2394434469441329
+K=1 renlocal spectrum:  [1.72954441 2.89643182]
+K=-1 renlocal spectrum:  [0.75452984 2.89148377 4.16620949]
+Rensubl vacuum energy:  -0.23901143444033499
+K=1 rensubl spectrum:  [1.71655883 2.87788919]
+K=-1 rensubl spectrum:  [0.75033858 2.86430967 4.13036686]
