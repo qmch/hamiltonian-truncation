@@ -17,11 +17,11 @@ class TestStates(unittest.TestCase):
         
         #if L or m is not provided, raise an error
         with self.assertRaises(TypeError):
-            State(occs,nmax)
+            State(occs,nmax,L=None,m=None)
         with self.assertRaises(TypeError):
-            State(occs,nmax,L=1.)
+            State(occs,nmax,L=1.,m=None)
         with self.assertRaises(TypeError):
-            State(occs,nmax,m=1.)
+            State(occs,nmax,L=None,m=1.)
         
         #should raise ValueError: state not at rest when nmax is shifted
         with self.assertRaises(ValueError):

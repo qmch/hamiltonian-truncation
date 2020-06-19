@@ -27,7 +27,6 @@ def main(argv):
     #mass
     m = 1.
     
-    #make a Phi1234 object
     a = phi1234.Phi1234()
 
     #build the full basis with both values of k (parity)

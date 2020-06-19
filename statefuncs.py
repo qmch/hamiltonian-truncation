@@ -214,6 +214,9 @@ class Basis():
     def __repr__(self):
         return str(self.stateList)
 
+    def __len__(self):
+        return len(self.stateList)
+
     def __getitem__(self,index):
         return self.stateList[index]
 
