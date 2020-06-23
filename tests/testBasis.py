@@ -2,7 +2,7 @@
 """
 Created on Thu Jun 18 17:39:07 2020
 
-@author: aura1
+@author: Ian Lim
 """
 
 from statefuncs import State, Basis 
@@ -29,6 +29,8 @@ class TestBasis(unittest.TestCase):
         expected_basis = [[0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 2, 0, 0, 0],
                           [0, 0, 1, 0, 1, 0, 0], [0, 1, 0, 0, 0, 1, 0],
                           [1, 0, 0, 0, 0, 0, 1]]
+        # note there is no [0, 0, 0, 1, 0, 0, 0] state because such a state
+        # has k-parity -1
         
         self.assertEqual(len(self.basis),len(expected_basis))
         

@@ -233,7 +233,7 @@ class Basis():
             
             c=1.
             
-            if(self.stateList[i].isParityEigenstate()):
+            if (self.stateList[i].isParityEigenstate()):
                 c=scipy.sqrt(2.)
                 # Required for state normalization
             return (c,i)
@@ -275,15 +275,14 @@ class Basis():
             self.__RMlist = [State([],0,L=self.L,m=self.m,checkAtRest=False)]
             return
         
-        #why would this sqrt be negative? IL
-        #it appears there's a momentum cutoff as well
+        # for zero-momentum states, the maximum value of k is as follows.
         kmax = max(0., scipy.sqrt((self.Emax/2.)**2.-self.m**2.))
                 
-        #the max occupation number is either kmax divided by the momentum at n=1
-        #or Emax/omega, whichever is less
+        # the max occupation number of the n=1 mode is either kmax divided 
+        # by the momentum at n=1 or Emax/omega, whichever is less
         maxN1 = int(math.floor(
             min(kmax/k(1,self.L), self.Emax/omega(1,self.L,self.m))
-            )) #maximal occupation number of n=1 mode
+            ))
         
         RMlist0 = [State([N],1,L=self.L,m=self.m,checkAtRest=False) for N in range(maxN1+1)]
         # seed list of RM states,all possible n=1 mode occupation numbers

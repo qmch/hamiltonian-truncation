@@ -98,11 +98,42 @@ class Matrix():
             return self
     
     def transpose(self):
+        
         """Transpose the matrix (switch basisI and basisJ and transpose M)"""
         return Matrix(self.basisJ, self.basisI, self.M.transpose())
 
 class Phi1234():
-    """ main class """
+    """ main class 
+    
+    Attributes
+    ----------
+    L : float
+        Circumference of the circle on which to quantize
+    m : float
+        Mass of the scalar field
+    Emax: float
+        Maximum energy cutoff
+    
+    All basic dictionaries in this class have two keys, 1 and -1, 
+        corresponding to values of k-parity.
+    
+    h0: dict of Matrix objects
+        Values are Matrix objects corresponding to the free Hamiltonian
+    potential: dict of dict of Matrix
+        Values are dictionaries where the keys are orders in
+        the field (0,2,4 correspond to phi^0,phi^2,phi^4) and the values
+        are the potential matrices at each order stored as Matrix objects
+        
+    When actually diagonalizing the Hamiltonian, we further restrict
+        to a subspace with some different nmax, possibly?
+    
+    H: dict of Matrix objects
+        Like h0, but on a restricted subspace defined by basis rather than
+        fullBasis
+    V: dict of dict of Matrix
+        Like potential but restricted to the basis subspace
+    
+    """
     def __init__(self):
         self.L = None
         self.m = None
@@ -137,8 +168,13 @@ class Phi1234():
 
 
     def buildBasis(self,k,Emax):
-        """ Builds the Hilbert space basis for which the Hamiltonian to actually diagonalize
-        is calculated (in general it's a subspace of fullBasis) """
+        """
+        Builds the Hilbert space basis for which the Hamiltonian to actually diagonalize
+        is calculated (in general it's a subspace of fullBasis) 
+        
+        Note that this is called in phi4eigs, but not in generating
+        the original potential matrix and free Hamiltonian.
+        """
 
         self.basis[k] = Basis(m=self.m, L=self.L, Emax=Emax, K=k, nmax=self.fullBasis[k].nmax)
         # We use the vector length (nmax) of the full basis. In this way we can compare elements between the two bases
@@ -225,8 +261,7 @@ class Phi1234():
                 tempEnergies[j] = basis[j].energy
                 #self.h0[k].addColumn(newcolumn)
                 
-            #self.h0[k].finalize()
-            
+            #self.h0[k].finalize()            
             """
                 basically this is just a diagonal matrix of the eigenvalues
                 since the Hamiltonian h0 is diagonal in this basis this is faster.
