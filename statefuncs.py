@@ -20,6 +20,7 @@ def omega(n,L,m):
     Note: since sqrt comes from scipy, this method also works with Numpy arrays.
     """
     return sqrt(m**2.+((2.*pi/L)*n)**2.)
+
 def k(n,L):
     """ computes momentum from wavenumber n, given circumference L"""
     return (2.*pi/L)*n
@@ -242,28 +243,6 @@ class Basis():
             return (1,self.reversedStatePos[state])
         
         raise NotInBasis
-        '''
-        try:
-            i = self.statePos[state]
-
-            c=1.
-            # If we got this far, could we not just check isParityEigenstate
-            # on state rather than the looked-up version? would save a call
-            # to statelist
-            # note: we could, but if the state was "fast" then this flag has not
-            # been set yet
-            if(self.stateList[i].isParityEigenstate()):
-                c=scipy.sqrt(2.)
-                # Required for state normalization
-            return (c, i)
-        
-        except KeyError:
-            # In case the state is not found
-            try:
-                return (1., self.reversedStatePos[state])
-            except KeyError:
-                raise NotInBasis()
-        '''
 
     def __buildRMlist(self):
         """ sets list of all right-moving states with particles of individual wave number 
