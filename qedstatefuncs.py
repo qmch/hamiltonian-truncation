@@ -103,3 +103,42 @@ class SpinorState():
         if not self.size == 2*self.nmax+1:
             raise ValueError("attempt to reverse asymmetric occupation list")
         return SpinorState(self.occs[0,::-1],self.occs[1,::-1],self.nmax,L=self.L,m=self.m)    
+
+'''
+class SpinorMatrix():
+    def __init__(self, matrix):
+        """
+        Parameters
+        ----------
+        matrix : 2D NumPy array (2x2)
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        self.matrix = matrix
+    
+    def __mul__(self, other):
+        """ Multiplication of matrix with matrix or number"""
+        if isinstance(other, SpinorMatrix):
+            return self.matrix * other.matrix
+        elif isinstance(other, SpinorState):
+            newLeftOccs = (self.matrix[0,0] * other.leftMoverOccs
+                + self.matrix[0,1] * other.rightMoverOccs)
+            newRightOccs = (self.matrix[1,0] * other.leftMoverOccs
+                + self.matrix[1,1] * other.rightMoverOccs)
+            return SpinorState(newLeftOccs,newRightOccs,nmax = other.nmax,
+                               L = other.L, m = other.m)
+        else:
+            return self.matrix * other
+        
+    def __rmul__(self, other):
+        """ Define multiplication from the left in the most sensible way """
+        return other * self.matrix
+    
+    def __repr__(self):
+        return str(self.matrix)
+'''
