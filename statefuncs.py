@@ -8,9 +8,10 @@
 
 import numpy
 import scipy
-from scipy import sqrt, pi
+from numpy import sqrt, pi
 from operator import attrgetter
 import math
+from numpy.testing import assert_allclose
 
 tol = 0.00001
 
@@ -24,6 +25,26 @@ def omega(n,L,m):
 def k(n,L):
     """ computes momentum from wavenumber n, given circumference L"""
     return (2.*pi/L)*n
+
+def occsEnergy(occs,nmax,L,m):
+    """
+    Computes energy given a list of occupation numbers.
+    occs can be a NumPy array or a list.
+    """
+    nmin = nmax - len(occs) + 1
+    energies = omega(numpy.arange(len(occs))+nmin, L, m)
+    return energies.dot(occs)
+
+def occsMomentum(occs,nmax,L):
+    """
+    Computes momentum given a list of occupation numbers.
+    occs can be a NumPy array or a list.
+    """
+    nmin = nmax - len(occs) + 1
+    # dot seems to be okay here because these are ints;
+    # in the energy calc there is some rounding error
+    totalWN = (numpy.arange(len(occs))+nmin).dot(occs)
+    return (2*pi/L)*totalWN
 
 class State():
     def __init__(self, occs, nmax, L=None, m=None, fast=False, checkAtRest=True):
@@ -235,7 +256,7 @@ class Basis():
             c=1.
             
             if (self.stateList[i].isParityEigenstate()):
-                c=scipy.sqrt(2.)
+                c=sqrt(2.)
                 # Required for state normalization
             return (c,i)
         
@@ -255,7 +276,7 @@ class Basis():
             return
         
         # for zero-momentum states, the maximum value of k is as follows.
-        kmax = max(0., scipy.sqrt((self.Emax/2.)**2.-self.m**2.))
+        kmax = max(0., sqrt((self.Emax/2.)**2.-self.m**2.))
                 
         # the max occupation number of the n=1 mode is either kmax divided 
         # by the momentum at n=1 or Emax/omega, whichever is less
@@ -272,7 +293,70 @@ class Basis():
                 p0 = RMstate.momentum
                 e0 = RMstate.energy
                 maxNn = int(math.floor(
-                    min((kmax-p0)/k(n,self.L), (self.Emax-scipy.sqrt(self.m**2+p0**2)-e0)/omega(n,self.L,self.m))
+                    min((kmax-p0)/k(n,self.L), (self.Emax-sqrt(self.m**2+p0**2)-e0)/omega(n,self.L,self.m))
+                    ))#maximal occupation number of mode n given the occupation numbers of all previous modes
+                    #either based on the k limit or the energy limit -IL
+                                    
+                for N in range(maxNn+1):
+                    longerstate=RMstate.occs[:]
+                    #longerstate = numpy.append(longerstate,N)
+                    longerstate.append(N) #add all possible occupation numbers for mode n 
+                    RMlist1.append(State(longerstate,len(longerstate),L=self.L,m=self.m, checkAtRest=False))
+            #RMlist1 created, copy it back to RMlist0
+            RMlist0 = RMlist1
+            
+        self.__RMlist = RMlist0 #save list of RMstates in an internal variable 
+
+    def __buildRMlist2(self):
+        """ sets list of all right-moving states with particles of individual wave number 
+        <= nmax, total momentum <= Emax/2 and total energy <= Emax
+        This function works by first filling in n=1 mode in all possible ways, then n=2 mode
+        in all possible ways assuming the occupation of n=1 mode, etc
+        
+        We use NumPy arrays to avoid having to create states that will
+        eventually be thrown away.
+        """
+
+        if self.nmax == 0:
+            self.__RMlist = [State([],0,L=self.L,m=self.m,checkAtRest=False)]
+            return
+        
+        # for zero-momentum states, the maximum value of k is as follows.
+        kmax = max(0., sqrt((self.Emax/2.)**2.-self.m**2.))
+                
+        # the max occupation number of the n=1 mode is either kmax divided 
+        # by the momentum at n=1 or Emax/omega, whichever is less
+        maxN1 = int(math.floor(
+            min(kmax/k(1,self.L), self.Emax/omega(1,self.L,self.m))
+            ))
+        
+        RMlist0 = [State([N],1,L=self.L,m=self.m,checkAtRest=False) for N in range(maxN1+1)]
+        # seed list of RM states,all possible n=1 mode occupation numbers
+        
+        for n in range(2,self.nmax+1): #go over all other modes
+            RMlist1=[] #we will take states out of RMlist0, augment them and add to RMlist1
+            for RMstate in RMlist0: # cycle over all RMstates
+                #p0 = RMstate.momentum
+                #e0 = RMstate.energy
+                
+                assert len(RMstate.occs) == RMstate.nmax
+                
+                p0 = occsMomentum(RMstate.occs, nmax=len(RMstate.occs),
+                                  L=self.L)
+                e0 = occsEnergy(RMstate.occs, nmax=len(RMstate.occs),
+                                L=self.L, m=self.m)
+                
+                '''
+                # for testing occsMomentum and occsEnergy
+                
+                assert p0 == occsMomentum(RMstate.occs,
+                                          len(RMstate.occs), self.L)
+                assert_allclose(e0,occsEnergy(RMstate.occs,
+                                        len(RMstate.occs), self.L, self.m))
+                '''
+                
+                maxNn = int(math.floor(
+                    min((kmax-p0)/k(n,self.L), (self.Emax-sqrt(self.m**2+p0**2)-e0)/omega(n,self.L,self.m))
                     ))#maximal occupation number of mode n given the occupation numbers of all previous modes
                     #either based on the k limit or the energy limit -IL
                                     
