@@ -7,7 +7,7 @@ Created on Sat Jun 27 15:19:10 2020
 
 import numpy as np
 import scipy
-from scipy import sqrt, pi
+from numpy import sqrt, pi
 from operator import attrgetter
 import math
 from statefuncs import omega, k
@@ -114,7 +114,8 @@ class FermionState():
         """ Reverse under P parity """
         if not self.size == 2*self.nmax+1:
             raise ValueError("attempt to reverse asymmetric occupation list")
-        return FermionState(self.occs[::-1,0],self.occs[::-1,1],self.nmax,L=self.L,m=self.m)
+        return FermionState(self.occs[::-1,0],self.occs[::-1,1],self.nmax,
+                            L=self.L,m=self.m)
 
 class FermionBasis(Basis):
     """ Generic list of fermionic basis elements sorted in energy. """
@@ -131,7 +132,7 @@ class FermionBasis(Basis):
         if nmax == None:
             self.nmax = int(math.floor(sqrt((Emax/2.)**2.-m**2.)*self.L/(2.*pi)))
         else:
-            self.nmax=nmax
+            self.nmax = nmax
         
         self.stateList = sorted(self.__buildBasis(), key=attrgetter('energy'))
         # Collection of Fock space states, possibly sorted in energy
@@ -162,16 +163,10 @@ class FermionBasis(Basis):
             return
         
         # for zero-momentum states, the maximum value of k is as follows.
-        kmax = max(0., scipy.sqrt((self.Emax/2.)**2.-self.m**2.))
+        kmax = max(0., np.sqrt((self.Emax/2.)**2.-self.m**2.))
                 
         # the max occupation number of the n=1 mode is either kmax divided 
         # by the momentum at n=1 or Emax/omega, whichever is less
-        '''
-        if (kmax / k(1,self.L) < 1) or (self.Emax/omega(1,self.L,self.m) < 1):
-            maxN1 = 0
-        else:
-            maxN1 = 1
-        '''
         maxN1 = min([math.floor(kmax/k(1,self.L)),
                      math.floor(self.Emax/omega(1,self.L,self.m)),
                      2])
@@ -266,7 +261,16 @@ class FermionBasis(Basis):
                     if deltaE < 0: #if this happens, we can break since subsequent LMstates have even higherenergy (RMsublist is ordered in energy)
                         break
                     
-                    maxN0 = min(int(math.floor(deltaE/self.m)),2)
+                    # for massless excitations we can put the max of 2
+                    # excitations in the zero mode.
+                    # this is different from the bosonic case where
+                    # massless excitations carry no energy and the number
+                    # of zero mode excitations is unbounded.
+                    if self.m != 0:
+                        maxN0 = min(int(math.floor(deltaE/self.m)),2)
+                    else:
+                        maxN0 = 2
+                    
                     assert maxN0 in range(3)
                     
                     if maxN0 == 0:
@@ -288,42 +292,3 @@ class FermionBasis(Basis):
                             statelist.append(state)
 
         return statelist
-
-'''
-class FermionMatrix():
-    def __init__(self, matrix):
-        """
-        Parameters
-        ----------
-        matrix : 2D NumPy array (2x2)
-            DESCRIPTION.
-
-        Returns
-        -------
-        None.
-
-        """
-        
-        self.matrix = matrix
-    
-    def __mul__(self, other):
-        """ Multiplication of matrix with matrix or number"""
-        if isinstance(other, FermionMatrix):
-            return self.matrix * other.matrix
-        elif isinstance(other, FermionState):
-            newLeftOccs = (self.matrix[0,0] * other.leftMoverOccs
-                + self.matrix[0,1] * other.rightMoverOccs)
-            newRightOccs = (self.matrix[1,0] * other.leftMoverOccs
-                + self.matrix[1,1] * other.rightMoverOccs)
-            return FermionState(newLeftOccs,newRightOccs,nmax = other.nmax,
-                               L = other.L, m = other.m)
-        else:
-            return self.matrix * other
-        
-    def __rmul__(self, other):
-        """ Define multiplication from the left in the most sensible way """
-        return other * self.matrix
-    
-    def __repr__(self):
-        return str(self.matrix)
-'''

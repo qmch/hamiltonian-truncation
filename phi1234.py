@@ -297,12 +297,12 @@ class Phi1234():
             for n in offdiagOps.keys():
 
                 offdiag_V = Matrix(lookupBasis, basis)
-                diagonal = scipy.zeros(basis.size)
+                diagonal = np.zeros(basis.size)
                     
                 # for each state in the basis
                 for j in range(basis.size):
                                         
-                    newcolumn = scipy.zeros(lookupBasis.size)
+                    newcolumn = np.zeros(lookupBasis.size)
                     # for each off-diagonal operator at a given order
                     for op in offdiagOps[n]:
                         try:
@@ -416,7 +416,7 @@ class Phi1234():
         if corr:
             print("Adding subleading corrections to k="+str(k), " eigenvalues")
 
-            self.eigsrensubl[k] = scipy.zeros(n)
+            self.eigsrensubl[k] = np.zeros(n)
             cutoff = 5.
 
             for i in range(n):

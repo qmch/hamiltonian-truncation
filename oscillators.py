@@ -20,9 +20,10 @@ class NormalOrderedOperator():
     are present (dlist) and an overall multiplicative coefficient.
     
     Attributes:
-        clist (list of ints): a list of ns (Fourier indices) corresponding to creation ops,
-            see phi1234.py buildMatrix()
-        dlist (list of ints): another list of ns corresponding to destruction ops
+        clist (list of ints): a list of ns (Fourier indices) corresponding 
+        to creation ops, see phi1234.py buildMatrix()
+        dlist (list of ints): another list of ns corresponding to 
+        destruction ops
         L (float): circumference of the circle (the spatial dimension)
         m (float): mass of the field
         coeff (float): the overall multiplicative prefactor of this operator
