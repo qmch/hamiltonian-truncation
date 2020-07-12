@@ -45,7 +45,22 @@ class TestBasis(unittest.TestCase):
             if laststate:
                 self.assertLessEqual(laststate.energy, state.energy)
             laststate = state
-        
-        
+
+'''
+#test the length of a large basis whose length is known
+class TestLargeBasis(unittest.TestCase):
+    
+    def setUp(self):
+        self.Emax = 20.
+        self.basisk1 = Basis(L=10, Emax=20, m=1., K=1)
+        self.basisk2 = Basis(L=10, Emax=20, m=1., K=-1)
+    
+    def test_length(self):
+        self.assertEqual(len(self.basisk1), 12870)
+        self.assertEqual(len(self.basisk2), 12801)
+        # n.b. these numbers come from footnote 14 in 
+        # https://arxiv.org/pdf/1412.3460.pdf
+'''  
+    
 if __name__ == '__main__':
     unittest.main()
