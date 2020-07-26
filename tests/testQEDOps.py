@@ -66,3 +66,36 @@ class TestOrthogonalSpinors(unittest.TestCase):
         
         vdaggeru = np.vdot(self.myVSpinor2, self.myUSpinor)
         self.assertEqual(vdaggeru, 0)
+        
+class TestMasslessSpinors(unittest.TestCase):
+    def setUp(self):
+        self.L = 2*pi
+        self.m = 0.
+        self.n = 5
+        self.k = (2.*pi/self.L)*self.n
+        self.E = omega(self.n, self.L, self.m)
+        
+        self.myUSpinor = uspinor(self.n, self.L, self.m)
+        self.myVSpinor = vspinor(self.n, self.L, self.m)
+        # make spinors with -p
+        self.myUSpinor2 = uspinor(-self.n, self.L, self.m)
+        self.myVSpinor2 = vspinor(-self.n, self.L, self.m)
+    
+    def testStepFunction(self):
+        # test the step function behavior in the massless limit
+        
+        # the massless u-spinor for positive n should be [sqrt(2E),0]
+        self.assertEqual(np.sqrt(2*self.E),self.myUSpinor[0])
+        self.assertEqual(0,self.myUSpinor[1])
+        
+        # the massless v-spinor for positive n should be [sqrt(2E),0]
+        self.assertEqual(np.sqrt(2*self.E),self.myVSpinor[0])
+        self.assertEqual(0,self.myVSpinor[1])
+        
+        # the massless u-spinor for positive n should be [0, sqrt(2E)]
+        self.assertEqual(0,self.myUSpinor2[0])
+        self.assertEqual(np.sqrt(2*self.E),self.myUSpinor2[1])
+        
+        # the massless u-spinor for positive n should be [0, -sqrt(2E)]
+        self.assertEqual(0,self.myVSpinor2[0])
+        self.assertEqual(-np.sqrt(2*self.E),self.myVSpinor2[1])

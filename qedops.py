@@ -11,6 +11,7 @@ import numpy as np
 from numpy import pi, sqrt, product
 from operator import attrgetter
 from statefuncs import omega, State, NotInBasis
+from qedstatefuncs import FermionState
 
 tol = 0.0001
 
@@ -41,7 +42,7 @@ class FermionOperator():
         deltaE (float): the net energy difference produced by acting on a state
             with this operator
     """
-    def __init__(self,leftclist,leftdlist,rightclist,rightdlist,
+    def __init__(self,clist,dlist,anticlist,antidlist,
                  L,m,extracoeff=1):
         """
         Args:
@@ -49,19 +50,36 @@ class FermionOperator():
             extracoeff (float): an overall multiplicative prefactor for the
                 operator, *written as a power of the field operator phi*
         """
-        self.clist=clist
-        self.dlist=dlist
+        # Check if there are multiple operators acting on the same mode.
+        # Since fermionic operators anticommute, operators which have e.g.
+        # 2 annihilation operators acting on the same mode are just 0.
+        self.uniqueOps = (checkValidList(clist) and checkValidList(dlist)
+                and checkValidList(anticlist) and checkValidList(antidlist))
+        
+        self.clist = clist
+        self.dlist = dlist
+        self.anticlist = anticlist
+        self.antidlist = antidlist
         self.L=L
         self.m=m
         # coeff converts the overall prefactor of phi (extracoeff) to a prefactor
         # for the string of creation and annihilation operators in the final operator
         # see the normalization in Eq. 2.6
+        # TO-DO: update normalization
         self.coeff = extracoeff/product([sqrt(2.*L*omega(n,L,m)) for n in clist+dlist])
-        #can this be sped up by vectorizing the omega function? IL
+
         self.deltaE = sum([omega(n,L,m) for n in clist]) - sum([omega(n,L,m) for n in dlist])
         #can perform this as a vector op but the speedup is small
         #self.deltaE = sum(omega(array(clist),L,m))-sum(omega(array(dlist),L,m))
+    
+    def checkValidList(opsList):
+        """
+        Given a list of creation or annihilation operators, checks if
+        the modes they act on are all unique.
+        """
         
+        return len(np.unique(opslist)) == len(opslist)
+    
     def __repr__(self):
         return str(self.clist)+" "+str(self.dlist) 
     
@@ -70,7 +88,7 @@ class FermionOperator():
         Applies the normal ordered operator to a given state.
         
         Args:
-            state0 (State): an input state for this operator
+            state0 (State): an input FermionState for this operator
         
         Returns:
             A tuple representing the input state after being acted on by
@@ -88,26 +106,38 @@ class FermionOperator():
             2 (for the two commutations).
             
         """
+        if not self.uniqueOps:
+            return (0,None)
         #make a copy of this state up to occupation numbers and nmax
-        state = State(state0.occs[:], state0.nmax, fast=True)
-        n = 1.
+        state = FermionState(particleOccs=state0.occs[:,0],
+                             antiparticleOccs=state0.occs[:,1], nmax=state0.nmax,
+                             fast=True)
+        
+        #note: there may be an easier way for fermionic states
         #for each of the destruction operators
         for i in self.dlist:
-            #if there is no Fourier mode at that value of n (ground state)
-            if state[i] == 0:
-                #then the state is annihilated
+            if state[i,0] == 0:
                 return(0,None)
-            #otherwise we multiply n by the occupation number of that state
-            n *= state[i]
-            #and decrease its occupation number by 1
-            state[i] -= 1
-        #for each of the creation operators
+            state[i,0] -= 1
         for i in self.clist:
-            #multiply n by the occupation number of that state
-            n *= state[i]+1
-            #increase the occupation number of that mode by 1
-            state[i] += 1
-        return (n, state)
+            # by Pauli exclusion, states can have at most one excitation
+            # in a mode
+            if state[i,0] == 1:
+                return (0,None)
+            state[i,0] += 1
+        
+        for i in self.antidlist:
+            if state[i,1] == 0:
+                return(0,None)
+            state[i,1] -= 1
+        for i in self.anticlist:
+            if state[i,1] == 1:
+                return (0,None)
+            state[i,1] += 1
+        
+        # we never pick up a normalization factor for fermionic states
+        # since the occupation numbers are either one or zero
+        return (1, state)
 
     def apply(self, basis, i, lookupbasis=None):
         """ Takes a state index in basis, returns another state index (if it

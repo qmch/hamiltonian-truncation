@@ -15,37 +15,32 @@ from statefuncs import State, Basis
 
 class FermionState():
     
-    def __init__(self, leftMoverOccs, rightMoverOccs, nmax,
+    def __init__(self, particleOccs, antiparticleOccs, nmax,
                  L=None, m=None, fast=False, checkAtRest=True,
                  checkChargeNeutral=True):
         """ 
         Args:
-            rightMoverOccs: occupation number list
-            leftMoverOccs: occupation number list
+            antiparticleOccs: occupation number list
+            particleOccs: occupation number list
             nmax (int): wave number of the last element in occs
             fast (bool): a flag for when occs and nmax are all that are needed
                 (see transformState in oscillators.py)
             checkAtRest (bool): a flag to check if the total momentum is zero
         
-        For instance,
-        State([1,0,1],nmax=1) is a state with one excitation in the n=-1 mode
-        and one in the n=+1 mode.
-        State([1,0,1],nmax=2), however, is a state with one excitation in the
-        n=0 mode and one in the n=+2 mode.
         """
         #assert m >= 0, "Negative or zero mass"
         #assert L > 0, "Circumference must be positive"
-        assert (len(leftMoverOccs) == len(rightMoverOccs)),\
+        assert (len(particleOccs) == len(antiparticleOccs)),\
             "Occupation number lists should match in length"
             
-        assert np.all(np.less_equal(leftMoverOccs, 1))\
-            and np.all(np.less_equal(rightMoverOccs, 1)),\
+        assert (np.all(np.less_equal(particleOccs, 1))
+            and np.all(np.less_equal(antiparticleOccs, 1))),\
             "Pauli exclusion violated"
         
-        self.leftMoverOccs = np.array(leftMoverOccs)
-        self.rightMoverOccs = np.array(rightMoverOccs)
-        self.occs = np.transpose(np.vstack((self.leftMoverOccs,
-                                            self.rightMoverOccs)))
+        self.particleOccs = np.array(particleOccs)
+        self.antiparticleOccs = np.array(antiparticleOccs)
+        self.occs = np.transpose(np.vstack((self.particleOccs,
+                                            self.antiparticleOccs)))
         
         self.size = len(self.occs)
         self.nmax = nmax
@@ -58,7 +53,7 @@ class FermionState():
         wavenum = np.arange(self.nmin, self.nmax+1)
         self.totalWN = (wavenum*np.transpose(self.occs)).sum()
 
-        self.netCharge = self.leftMoverOccs.sum() - self.rightMoverOccs.sum()
+        self.netCharge = self.particleOccs.sum() - self.antiparticleOccs.sum()
 
         if checkAtRest:
             if self.totalWN != 0:            

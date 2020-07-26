@@ -48,7 +48,8 @@ def main(argv):
         a.buildMatrix()
         a.saveMatrix(fstr)
     
-    print("Runtime:",time.time()-startTime)
+    print(f"Building/loading matrix took: {time.time()-startTime}s")
+    startTime = time.time()
 
     a.buildBasis(k=1, Emax=Emax)
     a.buildBasis(k=-1, Emax=Emax)
@@ -59,6 +60,8 @@ def main(argv):
     gvalues = np.linspace(0,5,numsamples)
     for i, g in enumerate(gvalues):
         vacuumEnergiesRen[i], vacuumEnergiesSubl[i] = computeVacuumEnergy(a, g)
+    
+    print(f"Computing eigenvalues took: {time.time()-startTime}s")
     
     #fig, ax =  plt.subplots()
     plt.plot(gvalues, vacuumEnergiesRen, "x-k", label="ren.")
