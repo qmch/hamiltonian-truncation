@@ -1,10 +1,9 @@
 
 
-from statefuncs import State, Basis 
-from phi1234 import Phi1234
 from scipy.constants import pi
 import numpy as np
-from qedops import uspinor, vspinor
+from qedops import uspinor, vspinor, FermionOperator
+from qedstatefuncs import FermionState
 from statefuncs import omega
 import unittest
 
@@ -80,6 +79,12 @@ class TestMasslessSpinors(unittest.TestCase):
         # make spinors with -p
         self.myUSpinor2 = uspinor(-self.n, self.L, self.m)
         self.myVSpinor2 = vspinor(-self.n, self.L, self.m)
+        
+        self.myUSpinorNormed = uspinor(self.n, self.L, self.m, normed=True)
+        self.myVSpinorNormed = vspinor(self.n, self.L, self.m, normed=True)
+        # make spinors with -p
+        self.myUSpinor2Normed = uspinor(-self.n, self.L, self.m, normed=True)
+        self.myVSpinor2Normed = vspinor(-self.n, self.L, self.m, normed=True)
     
     def testStepFunction(self):
         # test the step function behavior in the massless limit
@@ -99,3 +104,49 @@ class TestMasslessSpinors(unittest.TestCase):
         # the massless u-spinor for positive n should be [0, -sqrt(2E)]
         self.assertEqual(0,self.myVSpinor2[0])
         self.assertEqual(-np.sqrt(2*self.E),self.myVSpinor2[1])
+    
+    def testStepFunctionNormed(self):
+        # test the step function behavior in the massless limit after
+        # normalizing by a factor of sqrt(2E)
+        self.assertEqual(1.,self.myUSpinorNormed[0])
+        self.assertEqual(0,self.myUSpinorNormed[1])
+        
+        self.assertEqual(1.,self.myVSpinorNormed[0])
+        self.assertEqual(0,self.myVSpinorNormed[1])
+        
+        self.assertEqual(0,self.myUSpinor2Normed[0])
+        self.assertEqual(1.,self.myUSpinor2Normed[1])
+        
+        self.assertEqual(0,self.myVSpinor2Normed[0])
+        self.assertEqual(-1.,self.myVSpinor2Normed[1])
+        
+class TestFermionOperator(unittest.TestCase):
+    def setUp(self):
+        self.L = 2*pi
+        self.nmax = 1
+        self.m = 0.
+        
+        self.state = FermionState([1,0,1],[1,0,1],self.nmax,self.L,self.m)
+        
+        #create an operator that annihilates a particle of momentum 1
+        self.operator = FermionOperator(clist=[],dlist=[1],anticlist=[],
+                                        antidlist=[],L=self.L,m=self.m,
+                                        normed=True, extracoeff=-1)
+        
+    def testApplyOperator(self):
+        n, newState = self.operator._transformState(self.state,
+                                                    returnCoeff=True)
+        #print(np.transpose(newState.occs))
+        
+        self.assertEqual(n,-1)
+        
+        #test that adding a particle to a filled state annihilates it
+        for c1 in (-1,1):
+            operator = FermionOperator([c1],[],[],[],self.L,self.m)
+            self.assertEqual(operator._transformState(self.state),
+                             (0,None))
+        
+        for c2 in (-1,1):
+            operator = FermionOperator([],[],[c2],[],self.L,self.m)
+            self.assertEqual(operator._transformState(self.state),
+                             (0,None))

@@ -10,7 +10,7 @@ import unittest
 class TestMasslessFermionBasis(unittest.TestCase):
     def setUp(self):
         self.Emax = 5.
-        self.fermionBasis = FermionBasis(L=2*pi, Emax=self.Emax, m=0., K=1)
+        self.fermionBasis = FermionBasis(L=2*pi, Emax=self.Emax, m=0.)
     
     def testNeutral(self):
         for state in self.fermionBasis:
@@ -25,11 +25,15 @@ class TestMasslessFermionBasis(unittest.TestCase):
         for state in self.fermionBasis:
             self.assertLessEqual(lastEnergy, state.energy)
             lastEnergy = state.energy
+    
+    def testLookup(self):
+        for (index, state) in enumerate(self.fermionBasis):
+            self.assertEqual(index,self.fermionBasis.lookup(state)[1])
 
 class TestMassiveFermionBasis(unittest.TestCase):
     def setUp(self):
         self.Emax = 10.
-        self.fermionBasis = FermionBasis(L=2*pi, Emax=self.Emax, m=4., K=1)
+        self.fermionBasis = FermionBasis(L=2*pi, Emax=self.Emax, m=4.)
     
     def testNeutral(self):
         for state in self.fermionBasis:
@@ -44,3 +48,7 @@ class TestMassiveFermionBasis(unittest.TestCase):
         for state in self.fermionBasis:
             self.assertLessEqual(lastEnergy, state.energy)
             lastEnergy = state.energy
+        
+    def testLookup(self):
+        for (index, state) in enumerate(self.fermionBasis):
+            self.assertEqual(index,self.fermionBasis.lookup(state)[1])

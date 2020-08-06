@@ -11,7 +11,7 @@ from numpy import sqrt, pi
 from operator import attrgetter
 import math
 from statefuncs import omega, k
-from statefuncs import State, Basis
+from statefuncs import State, Basis, NotInBasis
 
 class FermionState():
     
@@ -47,11 +47,14 @@ class FermionState():
         self.nmin = self.nmax - self.size + 1
         self.fast = fast
         
-        if fast == True:
-            return
-        
         wavenum = np.arange(self.nmin, self.nmax+1)
         self.totalWN = (wavenum*np.transpose(self.occs)).sum()
+        
+        self.__parityEigenstate = (self.size == 2*self.nmax + 1
+                                   and np.array_equal(self.occs[::-1],self.occs))
+        
+        if fast == True:
+            return
 
         self.netCharge = self.particleOccs.sum() - self.antiparticleOccs.sum()
 
@@ -63,9 +66,8 @@ class FermionState():
             if self.netCharge != 0:
                 raise ValueError("State not charge-neutral")
 
-        self.__parityEigenstate = (self.size == 2*self.nmax + 1
-                                   and np.array_equal(self.occs[::-1],self.occs))
-        self.__chargeNeutral = self.netCharge == 0
+        
+        self.__chargeNeutral = (self.netCharge == 0)
         
         self.L = L
         self.m = m
@@ -115,14 +117,13 @@ class FermionState():
 class FermionBasis(Basis):
     """ Generic list of fermionic basis elements sorted in energy. """
     
-    def __init__(self, L, Emax, m, K, nmax=None):
+    def __init__(self, L, Emax, m, nmax=None):
         """ nmax: if not None, forces the state vectors to have length 2nmax+1
             K: field parity (+1 or -1)
         """
         self.L = L
         self.Emax = Emax
         self.m = m
-        self.K = K
         
         if nmax == None:
             self.nmax = int(math.floor(sqrt((Emax/2.)**2.-m**2.)*self.L/(2.*pi)))
@@ -140,6 +141,23 @@ class FermionBasis(Basis):
         self.reversedStatePos = { state : i for i, state in enumerate(self.reversedStateList) }
 
         self.size = len(self.stateList)
+    
+    def lookup(self, state):
+        """looks up the index of a state. If this is not present, tries to look up for its parity-reversed
+        
+        Returns:
+            A tuple with the normalization factor c and the state index i
+        """
+        #rewritten to use if statements, which is syntactically somewhat cleaner
+        if (state in self.statePos):
+            i = self.statePos[state]
+
+            return (1,i)
+        
+        if (state in self.reversedStatePos):
+            return (1,self.reversedStatePos[state])
+        
+        raise NotInBasis
     
     def __buildRMlist(self):
         """ sets list of all right-moving states with particles of individual wave number 
@@ -177,7 +195,8 @@ class FermionBasis(Basis):
                          checkChargeNeutral=False) for occs in nextOccs]
         # seed list of RM states,all possible n=1 mode occupation numbers
         
-        #print(RMlist0)
+        # note: we may want to change this to only odd modes if we impose
+        # antiperiodic bcs, or just remove the zero mode.
         
         for n in range(2,self.nmax+1): #go over all other modes
             RMlist1=[] #we will take states out of RMlist0, augment them and add to RMlist1

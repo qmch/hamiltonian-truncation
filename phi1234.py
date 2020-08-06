@@ -101,6 +101,9 @@ class Matrix():
         
         """Transpose the matrix (switch basisI and basisJ and transpose M)"""
         return Matrix(self.basisJ, self.basisI, self.M.transpose())
+    
+    def __repr__(self):
+        return str(self.M)
 
 class Phi1234():
     """ main class 
@@ -213,13 +216,16 @@ class Phi1234():
             diagOps[0] = [ NOO([],[],L,m) ]
             
             offdiagOps[0] = []
-
+            #the 2 is a combinatorial factor since both aa^dagger and a^dagger a contribute
             diagOps[2] = [ NOO([a],[a],L,m, extracoeff=2.) for a in range(-nmax,nmax+1) ]
-
+            #the symmetry factor is 1 if a=-a and 2 otherwise
             offdiagOps[2] = [ NOO([a,-a],[],L,m,extracoeff=comb(a,-a))
                     for a in range(-nmax,nmax+1) if a<=-a<=nmax and
                     omega(a,L,m)+omega(-a,L,m) <= Emax+tol]
-        
+            # the default symmetry factor is 6 (4 choose 2) if a and b are distinct
+            # and c, a+b-c are distinct
+            # notice the index for b runs from a to nmax so we only get unique
+            # pairs a and b, i.e. (1,1), (1,2), (1,3), (2,2), (2,3), (3,3).
             diagOps[4] = [ NOO([a,b],[c,a+b-c],L,m, extracoeff=6.*comb(a,b)*comb(c,a+b-c))
                     for a in range(-nmax,nmax+1) for b in range (a,nmax+1)
                     for c in range(-nmax,nmax+1) if
