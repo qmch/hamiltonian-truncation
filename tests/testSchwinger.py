@@ -13,11 +13,14 @@ from schwinger import Schwinger
 from scipy.constants import pi
 import numpy as np
 import unittest
+import time
 
 class TestSchwinger(unittest.TestCase):    
     def testMatrix(self):
         
         verbose = False
+        
+        start = time.time()
         
         a = Schwinger()
         a.buildFullBasis(Emax=4., m=0, L=2*pi)
@@ -42,6 +45,8 @@ class TestSchwinger(unittest.TestCase):
         
         #print([state.occs for state in a.fullBasis[-1]])
         a.buildMatrix()
+        
+        print(f"Runtime: {time.time()-start}")
         
         if verbose:
             print("Free Hamiltonian:")

@@ -126,12 +126,15 @@ class TestFermionOperator(unittest.TestCase):
         self.nmax = 1
         self.m = 0.
         
+        self.Emax = 5.
+        #self.fermionBasis = FermionBasis(L=2*pi, Emax=self.Emax, m=0.)
+        
         self.state = FermionState([1,0,1],[1,0,1],self.nmax,self.L,self.m)
         
         #create an operator that annihilates a particle of momentum 1
         self.operator = FermionOperator(clist=[],dlist=[1],anticlist=[],
                                         antidlist=[],L=self.L,m=self.m,
-                                        normed=True, extracoeff=-1)
+                                        normed=True, extracoeff=1)
         
     def testApplyOperator(self):
         n, newState = self.operator._transformState(self.state,
@@ -150,3 +153,44 @@ class TestFermionOperator(unittest.TestCase):
             operator = FermionOperator([],[],[c2],[],self.L,self.m)
             self.assertEqual(operator._transformState(self.state),
                              (0,None))
+        
+        #test that removing a particle from an empty state annihilates it
+        #note: we shouldn't really act on the zero mode at all
+        #because it is not well-defined for the massless fermion
+        operator = FermionOperator([],[0],[],[],self.L,self.m,normed=True)
+        self.assertEqual(operator._transformState(self.state), (0,None))
+        
+        operator = FermionOperator([],[],[],[0],self.L,self.m,normed=True)
+        self.assertEqual(operator._transformState(self.state), (0,None))
+    
+    def testOperatorSigns(self):
+        #an operator that destroys a particle of momentum 1
+        dOperator = FermionOperator(clist=[],dlist=[1],anticlist=[],
+                                    antidlist=[],L=self.L,m=self.m,
+                                    normed=True, extracoeff=1)
+        
+        state1 = FermionState([1,0,1],[0,0,0],self.nmax,self.L,self.m,
+                              checkAtRest=False,checkChargeNeutral=False)
+        state2 = FermionState([0,0,1],[0,0,0],self.nmax,self.L,self.m,
+                              checkAtRest=False,checkChargeNeutral=False)
+        state3 = FermionState([0,0,1],[0,0,1],self.nmax,self.L,self.m,
+                              checkAtRest=False,checkChargeNeutral=False)
+        
+        outState1 = FermionState([1,0,0],[0,0,0],self.nmax,self.L,self.m,
+                                 checkAtRest=False,checkChargeNeutral=False)
+        outState2 = FermionState([0,0,0],[0,0,0],self.nmax,self.L,self.m,
+                                 checkAtRest=False,checkChargeNeutral=False)
+        outState3 = FermionState([0,0,0],[0,0,1],self.nmax,self.L,self.m,
+                                 checkAtRest=False,checkChargeNeutral=False)
+        
+        n, newState = dOperator._transformState(state1, returnCoeff=True)
+        self.assertEqual(n,-1)
+        self.assertEqual(newState, outState1)
+        
+        n, newState = dOperator._transformState(state2, returnCoeff=True)
+        self.assertEqual(n,1)
+        self.assertEqual(newState, outState2)
+        
+        n, newState = dOperator._transformState(state3, returnCoeff=True)
+        self.assertEqual(n,-1)
+        self.assertEqual(newState, outState3)

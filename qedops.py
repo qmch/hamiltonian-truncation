@@ -42,11 +42,18 @@ class FermionOperator():
     operators first and then antiparticle operators, but each of these is
     separately normal-ordered.
     
+    Note also that the order matters in clist and dlist due to the signs
+    associated with anticommutation. Operators are provided in the order one
+    would write them (from left to right) and stored in reverse order
+    (the order they act on states).
+    
     Attributes:
         clist (list of ints): a list of ns (Fourier indices) corresponding 
-        to creation ops, see phi1234.py buildMatrix()
+        to creation ops
         dlist (list of ints): another list of ns corresponding to 
         destruction ops
+        anticlist (list of ints)
+        antidlist (list of ints)
         L (float): circumference of the circle (the spatial dimension)
         m (float): mass of the field
         coeff (float): the overall multiplicative prefactor of this operator
@@ -71,10 +78,10 @@ class FermionOperator():
                           and self.checkValidList(anticlist)
                           and self.checkValidList(antidlist))
         
-        self.clist = clist
-        self.dlist = dlist
-        self.anticlist = anticlist
-        self.antidlist = antidlist
+        self.clist = clist[::-1]
+        self.dlist = dlist[::-1]
+        self.anticlist = anticlist[::-1]
+        self.antidlist = antidlist[::-1]
         self.L=L
         self.m=m
         # coeff converts the overall prefactor of phi (extracoeff) to a prefactor
@@ -83,6 +90,7 @@ class FermionOperator():
         if normed:
             self.coeff = extracoeff
         else:
+            #note: have to be careful with this for massless zero modes
             self.coeff = extracoeff/product([sqrt(2.*L*omega(n,L,m))
                                              for n in clist+dlist])
 
@@ -138,33 +146,47 @@ class FermionOperator():
         # however, these loops are short and fast, so NumPy shortcuts probably
         # will not provide too much speed-up at this level.
         
+        norm = 1
+        
         for i in self.dlist:
             if state[i][0] == 0:
                 return(0,None)
             state[i][0] -= 1
+            # we have to anticommute past all the antiparticle creation ops
+            # and the particle creation ops up to i
+            norm *= (-1)**(np.sum(state.occs[:,1])+
+                           np.sum(state.occs[:i-state.nmin+1,0]))
         for i in self.clist:
             # by Pauli exclusion, states can have at most one excitation
             # in a mode
             if state[i][0] == 1:
                 return (0,None)
             state[i][0] += 1
+            # anticommute past all the antiparticle creation ops and the
+            # particle creation ops through i
+            norm *= (-1)**(np.sum(state.occs[:,1])+
+                           np.sum(state.occs[:i-state.nmin+1,0]))
         
         for i in self.antidlist:
             if state[i][1] == 0:
                 return(0,None)
             state[i][1] -= 1
+            # anticommute past the antiparticle creation ops up to i
+            norm *= (-1)**(np.sum(state.occs[:i-state.nmin+1,1]))
         for i in self.anticlist:
             if state[i][1] == 1:
                 return (0,None)
             state[i][1] += 1
+            # anticommute past the antiparticle creation ops
+            norm *= (-1)**(np.sum(state.occs[:i-state.nmin+1,1]))
         
         # We never pick up a nontrivial normalization factor for fermionic 
         # states since the occupation numbers are either one or zero.
         # The only option is if we wish to return the overall coefficient
         # of this operator or not.
         if returnCoeff:
-            return (self.coeff, state)
-        return (1, state)
+            return (norm*self.coeff, state)
+        return (norm, state)
 
     def apply(self, basis, i, lookupbasis=None):
         """ Takes a state index in basis, returns another state index (if it
@@ -173,7 +195,7 @@ class FermionOperator():
         if lookupbasis == None:
             lookupbasis = basis
         if self.deltaE+basis[i].energy < 0.-tol or self.deltaE+basis[i].energy > lookupbasis.Emax+tol:
-            # The trasformed element surely does not belong to the basis if E>Emax or E<0
+            # The transformed element surely does not belong to the basis if E>Emax or E<0
             raise NotInBasis()
         # apply the normal-order operator to this basis state
         n, newstate = self._transformState(basis[i])
@@ -207,5 +229,5 @@ class FermionOperator():
         norm, j = lookupbasis.lookup(newstate)
         
         c = 1.
-        
-        return (norm*c*sqrt(n)*self.coeff,j)
+        #no sqrt n since n is either 1 or -1
+        return (norm*c*n*self.coeff,j)

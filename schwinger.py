@@ -230,24 +230,28 @@ class Schwinger():
             newcolumn = np.zeros(lookupBasis.size)
             
             for k in np.arange(-nmax,nmax+1):
-                for op1 in psidaggerpsi[k]:
-                    for op2 in psidaggerpsi[-k]:
+                
+                for op2 in psidaggerpsi[-k]:                    
+                    n, newstate= op2._transformState(state,returnCoeff=True)
+                    if n == 0:
+                        continue
+                    for op1 in psidaggerpsi[k]:
                         try:
-                            n, newstate = op2._transformState(state,
-                                                              returnCoeff=True)
-                            if (n == 0):
-                                continue
-                            normalization, index = op1.apply2(basis, newstate)
-                            
+                            normalization, index = op1.apply2(basis,newstate)
+                        
                             if (index != None):
-                                newcolumn[index] += normalization*n
+                                newcolumn[index] += normalization * n / (k**2)
                         except NotInBasis:
                             pass
             
             potential.addColumn(newcolumn)
         
         potential.finalize()
-        print(potential)
+        print(potential.M.toarray())
+        isSymmetric = (np.array_equal(potential.M.toarray(),
+                                      potential.M.toarray().T))
+        if isSymmetric:
+            print("Matrix is symmetric")
         
         self.potential = potential
         # for each order (0,2,4) in phi
@@ -347,35 +351,40 @@ class Schwinger():
             # note: what is the range on n? revisit. All valid ns such that
             # -nmax <= k+n <= nmax and -nmax <= n <= nmax
             for n in np.arange(-self.fullBasis.nmax,self.fullBasis.nmax+1):
-                if not (-self.fullBasis.nmax <= k+n <= self.fullBasis.nmax):
+                if not (-self.fullBasis.nmax <= k-n <= self.fullBasis.nmax):
                     continue
-                if k+n == 0 or n == 0:
+                if k-n == 0 or n == 0:
                     continue
-                coeff = np.vdot(uspinor(k+n,self.L,self.m,normed=True),
+                
+                coeff = np.vdot(uspinor(n-k,self.L,self.m,normed=True),
                                 uspinor(n,self.L,self.m,normed=True))
-                adaggera = FermionOperator([k+n],[n],[],[],self.L,self.m,
+                adaggera = FermionOperator([n-k],[n],[],[],self.L,self.m,
                                            extracoeff=coeff,normed=True)
                 #n.b. -1 from anticommutation of bdagger and adagger
-                coeff = -1 * np.vdot(uspinor(k+n,self.L,self.m,normed=True),
+                coeff = -1 * np.vdot(uspinor(n-k,self.L,self.m,normed=True),
                                 vspinor(-n,self.L,self.m,normed=True))
-                bdaggeradagger = FermionOperator([k+n],[],[n],[],self.L,self.m,
+                bdaggeradagger = FermionOperator([n-k],[],[-n],[],self.L,self.m,
                                                  extracoeff=coeff,normed=True)
                 
-                coeff = np.vdot(vspinor(k+n,self.L,self.m,normed=True),
-                                uspinor(-n,self.L,self.m,normed=True))
-                ba = FermionOperator([],[-k-n],[],[-n],self.L,self.m,
+                coeff = np.vdot(vspinor(k-n,self.L,self.m,normed=True),
+                                uspinor(n,self.L,self.m,normed=True))
+                ba = FermionOperator([],[k-n],[],[n],self.L,self.m,
                                      extracoeff=coeff,normed=True)
                 # -1 from anticommuting b and b dagger
-                coeff = -1 * np.vdot(vspinor(-k-n,self.L,self.m,normed=True),
-                                     vspinor(n,self.L,self.m,normed=True))
-                bdaggerb = FermionOperator([],[],[n],[-k-n],self.L,self.m,
+                coeff = -1 * np.vdot(vspinor(k-n,self.L,self.m,normed=True),
+                                     vspinor(-n,self.L,self.m,normed=True))
+                bdaggerb = FermionOperator([],[],[-n],[k-n],self.L,self.m,
                                            extracoeff=coeff,normed=True)
+                #the anticommutator is always trivial because k-n = -n -> k=0
+                #and we've precluded this possiblity since k != 0
                 
                 opsList[k] += [adaggera, bdaggeradagger, ba, bdaggerb]
+                
         return opsList
 
     def generateOperators2(self,nmax):
         #an attempt at writing down all the operators explicitly
+        #...let's not do this maybe
         
         op0000 = [FermionOperator([k1,k3],[k2,k1+k3-k2],[],[],self.L,self.m,
                                   extracoeff=-1/(k1+k2)^2,normed=True) 
@@ -383,10 +392,25 @@ class Schwinger():
                   for k3 in range(-nmax,nmax+1)
                   if (k1+k2 != 0) and (k1 != 0) and (k2 != 0) and (k3 != 0)
                   ]
+        
+        #needs spinor wavefunction inner products
+        op51a = [FermionOperator([k1,k3],[k2,-k1-k2-k3],[],[],self.L,self.m,
+                                 extracoeff=-1/(k1+k2)**2,normed=True)
+                 for k1 in range(-nmax,nmax+1) for k2 in range(-nmax,nmax+1)
+                 for k3 in range(-nmax,nmax+1)
+                 if (k1+k2 != 0) and (k1 != 0) and (k2 != 0) and (k3 != 0)
+                 ]
+        
+        op51a_2 = [FermionOperator([k1],[-k1-k2-k3],[],[],self.L,self.m,
+                                   extracoeff=-1/(k1+k2)**2,normed=True)
+                   for k1 in range(-nmax,nmax+1) for k2 in range(-nmax,nmax+1)
+                   for k3 in range(-nmax,nmax+1)
+                   if (k2==k3) and (k1+k2 != 0) and (k1 != 0) and (k2 != 0)
+                   #k3 nonzero guaranteed since k2==k3
+                   ]
 
-    def setcouplings(self, g4, g2=0.):
-        self.g2 = float(g2)
-        self.g4 = float(g4)
+    def setcoupling(self, g):
+        self.g = float(g)
     
     def renlocal(self,Er):
         self.g0r, self.g2r, self.g4r = renorm.renlocal(self.g2,self.g4,self.Emax,Er)
