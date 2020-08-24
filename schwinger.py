@@ -89,8 +89,8 @@ class Schwinger():
         
         self.fullBasis = FermionBasis(self.L, Emax, self.m)
 
-    # TO-DO: update this when computing eigenvals
-    def buildBasis(self,k,Emax):
+    # TO-DO: test this method. We only have one interaction term so it's just V
+    def buildBasis(self,Emax):
         """
         Builds the Hilbert space basis for which the Hamiltonian to actually diagonalize
         is calculated (in general it's a subspace of fullBasis) 
@@ -99,14 +99,14 @@ class Schwinger():
         the original potential matrix and free Hamiltonian.
         """
 
-        self.basis[k] = Basis(m=self.m, L=self.L, Emax=Emax, K=k, nmax=self.fullBasis[k].nmax)
-        # We use the vector length (nmax) of the full basis. In this way we can compare elements between the two bases
+        self.basis = FermionBasis(self.L, Emax, self.m, nmax=self.fullBasis.nmax)
+        # We use the vector length (nmax) of the full basis.
+        # In this way we can compare elements between the two bases
         self.Emax = float(Emax)
+        
+        self.V = self.potential.sub(self.basis, self.basis).M.tocoo()
 
-        for nn in (0,2,4):
-            self.V[k][nn] = self.potential[k][nn].sub(self.basis[k], self.basis[k]).M.tocoo()
-
-        self.h0Sub[k] = self.h0[k].sub(self.basis[k],self.basis[k]).M.tocoo()
+        self.h0Sub = self.h0.sub(self.basis,self.basis).M.tocoo()
 
     def buildMatrix(self):
         """ Builds the full Hamiltonian in the basis of the free Hamiltonian eigenvectors.
@@ -238,9 +238,11 @@ class Schwinger():
                     for op1 in psidaggerpsi[k]:
                         try:
                             normalization, index = op1.apply2(basis,newstate)
-                        
+                            
                             if (index != None):
-                                newcolumn[index] += normalization * n / (k**2)
+                                #for ease of comparison we can put the 1/2L later
+                                newcolumn[index] += (normalization * n
+                                                     / (2*k**2))
                         except NotInBasis:
                             pass
             
@@ -341,6 +343,19 @@ class Schwinger():
             self.potential[k][4] = Matrix(basisI, basisJ, scipy.sparse.coo_matrix((f['arr_'+(str(z+9+i*n))], (f['arr_'+(str(z+10+i*n))], f['arr_'+(str(z+11+i*n))])), shape=(basisI.size, basisJ.size)))
  
     def generateOperators(self):
+        """
+        Generates a dictionary of normal-ordered operators corresponding
+        to the operator (\psi^\dagger \psi)_k for all values of k within range.
+
+        Returns
+        -------
+        opsList : dict of FermionOperators
+            A dictionary whose keys are values of k, i.e. which Fourier mode
+            of psi^\dagger \psi is under consideration, and whose entries are
+            the corresponding set of operators.
+
+        """
+        
         opsList = {}
         
         # we will generate (psi^\dagger psi)_k
@@ -353,28 +368,31 @@ class Schwinger():
             for n in np.arange(-self.fullBasis.nmax,self.fullBasis.nmax+1):
                 if not (-self.fullBasis.nmax <= k-n <= self.fullBasis.nmax):
                     continue
-                if k-n == 0 or n == 0:
-                    continue
+                # zero mode spinor wavefunctions fixed, can remove this?
+                # if k-n == 0 or n == 0:
+                #     continue
                 
                 coeff = np.vdot(uspinor(n-k,self.L,self.m,normed=True),
                                 uspinor(n,self.L,self.m,normed=True))
                 adaggera = FermionOperator([n-k],[n],[],[],self.L,self.m,
-                                           extracoeff=coeff,normed=True)
+                                           extracoeff=coeff/np.sqrt(self.L),
+                                           normed=True)
                 #n.b. -1 from anticommutation of bdagger and adagger
                 coeff = -1 * np.vdot(uspinor(n-k,self.L,self.m,normed=True),
                                 vspinor(-n,self.L,self.m,normed=True))
                 bdaggeradagger = FermionOperator([n-k],[],[-n],[],self.L,self.m,
-                                                 extracoeff=coeff,normed=True)
+                                                 extracoeff=coeff/np.sqrt(self.L),
+                                                 normed=True)
                 
                 coeff = np.vdot(vspinor(k-n,self.L,self.m,normed=True),
                                 uspinor(n,self.L,self.m,normed=True))
-                ba = FermionOperator([],[k-n],[],[n],self.L,self.m,
-                                     extracoeff=coeff,normed=True)
+                ba = FermionOperator([],[n],[],[k-n],self.L,self.m,
+                                     extracoeff=coeff/np.sqrt(self.L),normed=True)
                 # -1 from anticommuting b and b dagger
                 coeff = -1 * np.vdot(vspinor(k-n,self.L,self.m,normed=True),
                                      vspinor(-n,self.L,self.m,normed=True))
                 bdaggerb = FermionOperator([],[],[-n],[k-n],self.L,self.m,
-                                           extracoeff=coeff,normed=True)
+                                           extracoeff=coeff/np.sqrt(self.L),normed=True)
                 #the anticommutator is always trivial because k-n = -n -> k=0
                 #and we've precluded this possiblity since k != 0
                 
@@ -409,41 +427,48 @@ class Schwinger():
                    #k3 nonzero guaranteed since k2==k3
                    ]
 
-    def setcoupling(self, g):
+    def setcouplings(self, g):
         self.g = float(g)
     
     def renlocal(self,Er):
         self.g0r, self.g2r, self.g4r = renorm.renlocal(self.g2,self.g4,self.Emax,Er)
         self.Er = Er    
 
-    def computeHamiltonian(self, k=1, ren=False):
+    def computeHamiltonian(self, ren=False):
         """ Computes the (renormalized) Hamiltonian to diagonalize
-        k : K-parity quantum number
         ren : if True, computes the eigenvalue with the "local" renormalization procedure, otherwise the "raw" eigenvalues 
+        """
+        self.H = self.h0Sub - self.V*self.g**2
         """
         if not(ren):
             self.H[k] = self.h0Sub[k] + self.V[k][2]*self.g2 + self.V[k][4]*self.g4
         else:
             self.H[k] = self.h0Sub[k] + self.V[k][0]*self.g0r + self.V[k][2]*self.g2r + self.V[k][4]*self.g4r
+        """
     
 
-    def computeEigval(self, k=1, ren=False, corr=False, sigma=0, n=10):
+    def computeEigval(self, ren=False, corr=False, sigma=0, n=10):
         """ Diagonalizes the Hamiltonian and possibly computes the subleading renormalization corrections
-        k (int): K-parity quantum number 
         ren (bool): it should have the same value as the one passed to computeHamiltonian()
         corr (bool): if True, computes the subleading renormalization corrections, otherwise not.
         n (int): number of lowest eigenvalues to compute
         sigma : value around which the Lanczos method looks for the lowest eigenvalue. 
         """
-
+        
+        (self.eigenvalues, eigenvectorstranspose) = scipy.sparse.linalg.eigsh(
+                            self.H, k=n, sigma=sigma,
+                            which='LM', return_eigenvectors=True)
+        """
         if not ren:
             (self.eigenvalues[k], eigenvectorstranspose) = scipy.sparse.linalg.eigsh(self.H[k], k=n, sigma=sigma,
                             which='LM', return_eigenvectors=True)
         else:
             (self.eigsrenlocal[k], eigenvectorstranspose) = scipy.sparse.linalg.eigsh(self.H[k], k=n, sigma=sigma,
                             which='LM', return_eigenvectors=True)
+        """
         eigenvectors = eigenvectorstranspose.T
         
+        # TO-DO: update this for QED
         if corr:
             print("Adding subleading corrections to k="+str(k), " eigenvalues")
 
@@ -479,6 +504,9 @@ class Schwinger():
                         self.eigsrensubl[k][i] += c * coeff * cbar[a] * cbar[b] * Vab
 
     def vacuumE(self, ren="raw"):
+        return self.eigenvalues[0]
+        # implement others with corrections later
+        """
         if ren=="raw":
             return self.eigenvalues[1][0]
         elif ren=="renlocal":    
@@ -488,8 +516,9 @@ class Schwinger():
         else:
             raise ValueError("Wrong argument")
         # The vacuum is K-even
+        """
 
-    def spectrum(self, k, ren="raw"):
+    def spectrum(self, ren="raw"):
         if ren=="raw":
             eigs = self.eigenvalues
         elif ren=="renlocal":    
@@ -499,6 +528,8 @@ class Schwinger():
         else:
             raise ValueError("Wrong argument")
         
+        return scipy.array([x-self.vacuumE(ren=ren) for x in eigs[1:]])
+        """
         # Now subtract vacuum energies
         if k==1:
             return scipy.array([x-self.vacuumE(ren=ren) for x in eigs[k][1:]])
@@ -506,3 +537,4 @@ class Schwinger():
             return scipy.array([x-self.vacuumE(ren=ren) for x in eigs[k]])
         else:
             raise ValueError("Wrong argument")
+        """

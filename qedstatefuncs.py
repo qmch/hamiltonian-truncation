@@ -95,7 +95,7 @@ class FermionState():
         return self.__chargeNeutral
 
     def __repr__(self):
-        return str(self.occs)
+        return f"(Particle occs: {self.occs.T[0]}, antiparticle occs: {self.occs.T[1]})"#str(self.occs)
 
     def __setitem__(self, wn, n):
         """ Sets the occupation number corresponding to a wave number """
@@ -280,6 +280,8 @@ class FermionBasis(Basis):
                     # this is different from the bosonic case where
                     # massless excitations carry no energy and the number
                     # of zero mode excitations is unbounded.
+                    # we can manually set this to not add particles to the
+                    # zero mode by taking maxN0 = 0.
                     if self.m != 0:
                         maxN0 = min(int(math.floor(deltaE/self.m)),2)
                     else:

@@ -16,6 +16,8 @@ from qedstatefuncs import FermionState
 tol = 0.0001
 
 def uspinor(n,L,m,normed=False):
+    if m == 0 and n == 0:
+        return np.array([[1/sqrt(2)],[1/sqrt(2)]])
     k = (2.*pi/L)*n
     energy = omega(n,L,m)
     if normed:
@@ -24,6 +26,8 @@ def uspinor(n,L,m,normed=False):
     return np.array([[sqrt(energy+k)],[sqrt(energy-k)]])
 
 def vspinor(n,L,m,normed=False):
+    if m == 0 and n == 0:
+        return np.array([[1/sqrt(2)],[-1/sqrt(2)]])
     k = (2.*pi/L)*n
     energy = omega(n,L,m)
     if normed:
@@ -107,8 +111,8 @@ class FermionOperator():
         return len(np.unique(opsList)) == len(opsList)
     
     def __repr__(self):
-        return (str(self.clist)+" "+str(self.dlist)+" "+str(self.anticlist)
-                +" "+str(self.antidlist))
+        return (str(self.clist) + " " + str(self.dlist) + " " + str(self.anticlist)
+                + " " + str(self.antidlist) + " " + str(self.coeff))
     
     def _transformState(self, state0, returnCoeff=False):
         """
@@ -156,6 +160,14 @@ class FermionOperator():
             # and the particle creation ops up to i
             norm *= (-1)**(np.sum(state.occs[:,1])+
                            np.sum(state.occs[:i-state.nmin+1,0]))
+        
+        for i in self.antidlist:
+            if state[i][1] == 0:
+                return(0,None)
+            state[i][1] -= 1
+            # anticommute past the antiparticle creation ops up to i
+            norm *= (-1)**(np.sum(state.occs[:i-state.nmin+1,1]))
+        
         for i in self.clist:
             # by Pauli exclusion, states can have at most one excitation
             # in a mode
@@ -167,12 +179,7 @@ class FermionOperator():
             norm *= (-1)**(np.sum(state.occs[:,1])+
                            np.sum(state.occs[:i-state.nmin+1,0]))
         
-        for i in self.antidlist:
-            if state[i][1] == 0:
-                return(0,None)
-            state[i][1] -= 1
-            # anticommute past the antiparticle creation ops up to i
-            norm *= (-1)**(np.sum(state.occs[:i-state.nmin+1,1]))
+        
         for i in self.anticlist:
             if state[i][1] == 1:
                 return (0,None)

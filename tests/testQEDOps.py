@@ -163,16 +163,22 @@ class TestFermionOperator(unittest.TestCase):
         operator = FermionOperator([],[],[],[0],self.L,self.m,normed=True)
         self.assertEqual(operator._transformState(self.state), (0,None))
     
-    def testOperatorSigns(self):
-        #an operator that destroys a particle of momentum 1
+    def testDestructionOperatorSigns(self):
+        # test that destruction operators correctly anticommute when applied
+        # to states with our convention
         dOperator = FermionOperator(clist=[],dlist=[1],anticlist=[],
                                     antidlist=[],L=self.L,m=self.m,
                                     normed=True, extracoeff=1)
         
+        # this state has excitations in the n=+1 and n=-1 modes
+        # so there is one trivial anticommutation
         state1 = FermionState([1,0,1],[0,0,0],self.nmax,self.L,self.m,
                               checkAtRest=False,checkChargeNeutral=False)
+        # this state only has an excitation in the +1 mode
         state2 = FermionState([0,0,1],[0,0,0],self.nmax,self.L,self.m,
                               checkAtRest=False,checkChargeNeutral=False)
+        # this state has a particle and an antiparticle
+        # so there is one trivial anticommutation with the antiparticle op
         state3 = FermionState([0,0,1],[0,0,1],self.nmax,self.L,self.m,
                               checkAtRest=False,checkChargeNeutral=False)
         
@@ -194,3 +200,37 @@ class TestFermionOperator(unittest.TestCase):
         n, newState = dOperator._transformState(state3, returnCoeff=True)
         self.assertEqual(n,-1)
         self.assertEqual(newState, outState3)
+    
+    def testCreationOperatorOrdering(self):
+        # these operators have the creation operators in a different order
+        # so there should be a relative sign in applying these operators
+        op1 = FermionOperator([-1,1],[],[],[],self.L,self.m,normed=True)
+        op2 = FermionOperator([1,-1],[],[],[],self.L,self.m,normed=True)
+        
+        # do this also for antiparticle creation operators
+        op3 = FermionOperator([],[],[-1,1],[],self.L,self.m,normed=True)
+        op4 = FermionOperator([],[],[1,-1],[],self.L,self.m,normed=True)
+        
+        state = FermionState([0,0,0],[0,0,0],self.nmax,self.L,self.m,
+                             checkAtRest=False,checkChargeNeutral=False)
+        
+        outState = FermionState([1,0,1],[0,0,0],self.nmax,self.L,self.m,
+                                checkAtRest=False,checkChargeNeutral=False)
+        outState2 = FermionState([0,0,0],[1,0,1],self.nmax,self.L,self.m,
+                                 checkAtRest=False,checkChargeNeutral=False)
+        
+        n, newState = op1._transformState(state, returnCoeff=True)
+        self.assertEqual(n,1)
+        self.assertEqual(newState,outState)
+        
+        n, newState = op2._transformState(state, returnCoeff=True)
+        self.assertEqual(n,-1)
+        self.assertEqual(newState,outState)
+        
+        n, newState = op3._transformState(state, returnCoeff=True)
+        self.assertEqual(n,1)
+        self.assertEqual(newState,outState2)
+        
+        n, newState = op4._transformState(state, returnCoeff=True)
+        self.assertEqual(n,-1)
+        self.assertEqual(newState,outState2)
