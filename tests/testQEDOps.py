@@ -234,3 +234,31 @@ class TestFermionOperator(unittest.TestCase):
         n, newState = op4._transformState(state, returnCoeff=True)
         self.assertEqual(n,-1)
         self.assertEqual(newState,outState2)
+    
+    def testOrderingParticleAntiparticles(self):
+        state1 = FermionState([0,1,0],[0,0,0],2,self.L,self.m,
+                              checkAtRest=False,checkChargeNeutral=False)
+        state2 = FermionState([1,1,0],[0,0,0],2,self.L,self.m,
+                              checkAtRest=False,checkChargeNeutral=False)
+        state3 = FermionState([1,1,0],[1,0,0],2,self.L,self.m,
+                              checkAtRest=False,checkChargeNeutral=False)
+        state4 = FermionState([1,1,0],[1,0,1],2,self.L,self.m,
+                              checkAtRest=False,checkChargeNeutral=False)
+        
+        op1 = FermionOperator([2],[],[],[],self.L,self.m,normed=True)
+        
+        n, newState = op1._transformState(state1, returnCoeff=True)
+        #one anticommutation to get to the right spot
+        self.assertEqual(n,-1)
+        
+        #two anticommutations
+        n, newState = op1._transformState(state2, returnCoeff=True)
+        self.assertEqual(n,1)
+        
+        #three anticommutations
+        n, newState = op1._transformState(state3, returnCoeff=True)
+        self.assertEqual(n,-1)
+        
+        #four anticommutations ah ah ah
+        n, newState = op1._transformState(state4, returnCoeff=True)
+        self.assertEqual(n,1)

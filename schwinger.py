@@ -242,7 +242,7 @@ class Schwinger():
                             if (index != None):
                                 #for ease of comparison we can put the 1/2L later
                                 newcolumn[index] += (normalization * n
-                                                     / (2*k**2))
+                                                     / (2*self.L*k**2))
                         except NotInBasis:
                             pass
             

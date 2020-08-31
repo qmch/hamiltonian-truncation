@@ -42,9 +42,10 @@ def main(argv):
     
     a.buildBasis(a.fullBasis.Emax)
     
-    computeVacuumEnergy(a,g=1)
+    for gval in [0,0.2,0.4,0.6,0.8,1]:
+        computeVacuumEnergy(a,g=gval)
     
-    print(f"Spectrum: {a.spectrum()}")
+        print(f"Spectrum: {a.spectrum()}")
     #print(a.h0)
     #print(a.fullBasis)
     print("Runtime:",time.time()-startTime)
@@ -68,7 +69,7 @@ def computeVacuumEnergy(schwinger, g):
 
     """
     sigma = -30.
-    neigs = 5
+    neigs = 20
 
     schwinger.setcouplings(g)
 

@@ -289,6 +289,7 @@ class FermionBasis(Basis):
                     
                     assert maxN0 in range(3)
                     
+                    
                     if maxN0 == 0:
                         nextOccsList = [[0,0]]
                     elif maxN0 == 1:
