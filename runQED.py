@@ -9,8 +9,10 @@
 import schwinger
 import sys
 import scipy
+import numpy as np
 import time
 from scipy.constants import pi
+from math import isclose
 
 def main(argv):
     
@@ -42,10 +44,16 @@ def main(argv):
     
     a.buildBasis(a.fullBasis.Emax)
     
-    for gval in [0,0.2,0.4,0.6,0.8,1]:
+    for gval in [1]:#[0,0.2,0.4,0.6,0.8,1]:
         computeVacuumEnergy(a,g=gval)
+        spectrum = a.spectrum()
+        print(f"Spectrum: {spectrum}")
     
-        print(f"Spectrum: {a.spectrum()}")
+    '''
+    for index in np.arange(1,len(spectrum),2):
+        assert(isclose(spectrum[index],spectrum[index+1])), f"{spectrum[index]} !={spectrum[index+1]}"
+    '''
+    
     #print(a.h0)
     #print(a.fullBasis)
     print("Runtime:",time.time()-startTime)
@@ -68,8 +76,8 @@ def computeVacuumEnergy(schwinger, g):
     A float representing the vacuum energy for this set of parameters.
 
     """
-    sigma = -30.
-    neigs = 20
+    sigma = -1.#-30.
+    neigs = 6
 
     schwinger.setcouplings(g)
 

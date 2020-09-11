@@ -13,6 +13,14 @@ from scipy import integrate
 import numpy
 import scipy
 
+"""
+These functions correspond to kappa_0, kappa_2, and kappa_4 as given in Eq. 3.34
+in arXiv:1412.3460v6. Given the original couplings g2 and g4 as well as a
+reference energy (taken to be the vacuum energy in the raw truncation), we
+can compute the effect on the couplings of integrating out the high-energy
+states rather than just truncating the basis, and then numerically diagonalize
+with respect to the renormalized couplings.
+"""
 def ft0(g2, g4, E, cutoff=0.):
     if E<cutoff:
         return 0.
