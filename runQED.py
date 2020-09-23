@@ -42,6 +42,9 @@ def main(argv):
 
     a.buildMatrix()
     
+    print("Potential:")
+    print(f"{a.potential.M.toarray()}")
+    
     a.buildBasis(a.fullBasis.Emax)
     
     for gval in [1]:#[0,0.2,0.4,0.6,0.8,1]:
@@ -49,10 +52,10 @@ def main(argv):
         spectrum = a.spectrum()
         print(f"Spectrum: {spectrum}")
     
-    '''
+    
     for index in np.arange(1,len(spectrum),2):
         assert(isclose(spectrum[index],spectrum[index+1])), f"{spectrum[index]} !={spectrum[index+1]}"
-    '''
+    
     
     #print(a.h0)
     #print(a.fullBasis)
@@ -77,13 +80,15 @@ def computeVacuumEnergy(schwinger, g):
 
     """
     sigma = -1.#-30.
-    neigs = 6
+    neigs = 4
 
     schwinger.setcouplings(g)
 
     print(f"Computing raw eigenvalues for g4 = {g}")
 
     schwinger.computeHamiltonian(ren=False)
+    print("Hamiltonian:")
+    print(schwinger.H.toarray())
 
     schwinger.computeEigval(sigma=sigma, n=neigs, ren=False)
         

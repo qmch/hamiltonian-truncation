@@ -262,11 +262,14 @@ class Schwinger():
             potential.addColumn(newcolumn)
         
         potential.finalize()
-        print(potential.M.toarray())
+        #print(potential.M.toarray())
         isSymmetric = (np.array_equal(potential.M.toarray(),
                                       potential.M.toarray().T))
         if isSymmetric:
             print("Matrix is symmetric")
+        
+        if np.any(np.diag(potential.M.toarray())):
+            print("nonzero diagonal entries")
         
         self.potential = potential
         # for each order (0,2,4) in phi
@@ -464,9 +467,9 @@ class Schwinger():
         -------
         ops : list of FermionOperators
             All fermion operators matching the input parameters. The normalization
-            is for 1/k^2 * |\psi^\dagger \psi|^2, i.e. it contains the spinor
-            inner products and also the 1/L factor. The g^2/2 is implemented
-            later when multiplying the matrix entries of V.
+            is for 1/2k^2 * |\psi^\dagger \psi|^2, i.e. it contains the spinor
+            inner products and also the 1/L factor. The g^2 then multiplies
+            the matrix entries of V.
 
         """
         
@@ -479,6 +482,8 @@ class Schwinger():
         
         # note: easily modified for multiple delta functions
         # just make it a list of tuples and iterate over the masking conditions
+        # a minus sign is needed for the delta conditions with this convention
+        # since we have a_k1 and a^\dagger_{-k2}
         if deltacondition:
             mask = momenta[:,deltacondition[0]-1] == momenta[:,deltacondition[1]-1]
             momenta = momenta[mask]
@@ -487,11 +492,12 @@ class Schwinger():
             assert(kvals[2]+kvals[3] != 0)
             assert(kvals[0]+kvals[1] + kvals[2] + kvals[3] == 0)
 
-        # return the right functions for the spinor inner products        
-        spinor_lookup = {"uu" : lambda k1,k2: self.udotu(k1,k2),
-                         "uv" : lambda k1,k2: self.udotv(k1,k2),
+        # return the right functions for the spinor inner products
+        # with this convention, vs and udaggers get minus signs
+        spinor_lookup = {"uu" : lambda k1,k2: self.udotu(-k1,k2),
+                         "uv" : lambda k1,k2: self.udotv(-k1,-k2),
                          "vu" : lambda k1,k2: self.vdotu(k1,k2),
-                         "vv" : lambda k1,k2: self.vdotv(k1,k2)
+                         "vv" : lambda k1,k2: self.vdotv(k1,-k2)
                          }
         
         assert len(spinors) == 4
@@ -502,13 +508,18 @@ class Schwinger():
         for kvals in momenta:
             spinorfactor = (firstspinor(kvals[0],kvals[1])
                             * secondspinor(kvals[2],kvals[3]))
+            #print(firstspinor(kvals[0],kvals[1]))
+            #print(secondspinor(kvals[2],kvals[3]))
+            #print(spinorfactor)
+            #print(kvals)
             ksquared = 1/(kvals[0]+kvals[1])**2
-            ops += [FermionOperator(kvals[np.array(clist,dtype=int)-1],
+            #creation operators get the minus sign on k
+            ops += [FermionOperator(-kvals[np.array(clist,dtype=int)-1],
                                     kvals[np.array(dlist,dtype=int)-1],
                                     -kvals[np.array(anticlist,dtype=int)-1],
-                                    -kvals[np.array(antidlist,dtype=int)-1],
+                                    kvals[np.array(antidlist,dtype=int)-1],
                                     self.L,self.m,
-                                    extracoeff=coeff*spinorfactor*ksquared/self.L,
+                                    extracoeff=coeff*spinorfactor*ksquared/(2*self.L),
                                     normed=True)]
         
         return ops
@@ -574,25 +585,27 @@ class Schwinger():
                                                         spinors="uuvv")
         ops += adagger_a_b_bdagger_4
         
+        '''
         adagger_a_b_bdagger_2 = self.makeInteractionOps([1],[2],[],[],
                                                         nmax=nmax,
                                                         deltacondition=(3,4),
                                                         spinors="uuvv")
         ops += adagger_a_b_bdagger_2
-        
+        '''
         adagger_bdagger_b_bdagger_4 = self.makeInteractionOps([1],[],[2,4],[3],
                                                               nmax=nmax,
                                                               coeff=-1.,
                                                               spinors="uvvv")
         ops += adagger_bdagger_b_bdagger_4
         
+        '''
         adagger_bdagger_b_bdagger_2 = self.makeInteractionOps([1],[],[2],[],
                                                               nmax=nmax,
                                                               coeff=-1.,
                                                               deltacondition=(3,4),
                                                               spinors="uvvv")
         ops += adagger_bdagger_b_bdagger_2
-        
+        '''
         adagger_bdagger_adagger_bdagger_4 = self.makeInteractionOps([1,3],[],[2,4],[],
                                                                     nmax=nmax,
                                                                     coeff=-1.,
@@ -609,13 +622,14 @@ class Schwinger():
                                                                 deltacondition=(1,4),
                                                                 spinors="vvuv")
         ops += b_bdagger_adagger_bdagger_2_1
-        
+        '''
         b_bdagger_adagger_bdagger_2_2 = self.makeInteractionOps([3],[],[4],[],
                                                                 nmax=nmax,
                                                                 coeff=-1.,
                                                                 deltacondition=(1,2),
                                                                 spinors="vvuv")
         ops += b_bdagger_adagger_bdagger_2_2
+        '''
         
         adagger_bdagger_b_a_4 = self.makeInteractionOps([1],[4],[2],[3],
                                                         nmax=nmax,
@@ -657,7 +671,7 @@ class Schwinger():
                                                         deltacondition=(1,4),
                                                         spinors="vvvv")
         ops += b_bdagger_b_bdagger_2_1
-        
+        '''
         b_bdagger_b_bdagger_2_2 = self.makeInteractionOps([],[],[2],[1],
                                                         nmax=nmax,
                                                         coeff=-1.,
@@ -670,7 +684,8 @@ class Schwinger():
                                                         coeff=-1.,
                                                         deltacondition=(1,2),
                                                         spinors="vvvv")
-        ops += b_bdagger_b_bdagger_2_2
+        ops += b_bdagger_b_bdagger_2_3
+        '''
         
         #next the hermitian conjugate terms
         #we can probably do this with the off diagonal trick later
@@ -696,27 +711,30 @@ class Schwinger():
                                                         nmax=nmax,
                                                         spinors="vvuu")
         ops += b_bdagger_adagger_a_4
-        
+        '''
         b_bdagger_adagger_a_2 = self.makeInteractionOps([3],[4],[],[],
                                                         nmax=nmax,
                                                         deltacondition=(1,2),
                                                         spinors="vvuu")
         ops += b_bdagger_adagger_a_2
+        '''
         
         b_bdagger_b_a_4 = self.makeInteractionOps([],[4],[2],[1,3],
                                                   nmax=nmax,
                                                   coeff=-1.,
                                                   spinors="vvvu")
         ops += b_bdagger_b_a_4
-        
+        '''
         b_bdagger_b_a_2 = self.makeInteractionOps([],[4],[],[3],
                                                   nmax=nmax,
                                                   deltacondition=(1,2),
                                                   spinors="vvvu")
         ops += b_bdagger_b_a_2
+        '''
         
         b_a_b_a_4 = self.makeInteractionOps([],[2,4],[],[1,3],
                                             nmax=nmax,
+                                            coeff=-1.,
                                             spinors="vuvu")
         ops += b_a_b_a_4
         
@@ -724,13 +742,13 @@ class Schwinger():
                                                   nmax=nmax,
                                                   spinors="vuvv")
         ops += b_a_b_bdagger_4
-        
+        '''
         b_a_b_bdagger_2_1 = self.makeInteractionOps([],[2],[],[1],
                                                     nmax=nmax,
                                                     deltacondition=(3,4),
                                                     spinors="vuvv")
         ops += b_a_b_bdagger_2_1
-        
+        '''
         b_a_b_bdagger_2_2 = self.makeInteractionOps([],[2],[],[3],
                                                     nmax=nmax,
                                                     coeff=-1.,
@@ -751,9 +769,9 @@ class Schwinger():
         """ Computes the (renormalized) Hamiltonian to diagonalize
         ren : if True, computes the eigenvalue with the "local" renormalization procedure, otherwise the "raw" eigenvalues 
         """
-        # note: V (if using generateOperators2) is |psi^\dagger psi|^2/k^2.
+        # note: V (if using generateOperators2) is |psi^\dagger psi|^2/2k^2.
         # The 1/L factor is accounted for.
-        self.H = self.h0Sub - self.V*self.g**2/2
+        self.H = self.h0Sub - self.V*self.g**2
         """
         if not(ren):
             self.H[k] = self.h0Sub[k] + self.V[k][2]*self.g2 + self.V[k][4]*self.g4

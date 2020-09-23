@@ -21,9 +21,9 @@ def uspinor(n,L,m,normed=False):
     k = (2.*pi/L)*n
     energy = omega(n,L,m)
     if normed:
-        return np.array([[sqrt(energy+k)/sqrt(2*energy)],
-                         [sqrt(energy-k)/sqrt(2*energy)]])
-    return np.array([[sqrt(energy+k)],[sqrt(energy-k)]])
+        return np.array([[sqrt(energy-k)/sqrt(2*energy)],
+                         [sqrt(energy+k)/sqrt(2*energy)]])
+    return np.array([[sqrt(energy-k)],[sqrt(energy+k)]])
 
 def vspinor(n,L,m,normed=False):
     if m == 0 and n == 0:
@@ -31,9 +31,9 @@ def vspinor(n,L,m,normed=False):
     k = (2.*pi/L)*n
     energy = omega(n,L,m)
     if normed:
-        return np.array([[sqrt(energy+k)/sqrt(2*energy)],
-                         [-sqrt(energy-k)/sqrt(2*energy)]])
-    return np.array([[sqrt(energy+k)],[-sqrt(energy-k)]])
+        return np.array([[sqrt(energy-k)/sqrt(2*energy)],
+                         [-sqrt(energy+k)/sqrt(2*energy)]])
+    return np.array([[sqrt(energy-k)],[-sqrt(energy+k)]])
 
 class FermionOperator():
     """ abstract class for normal ordered fermionic operator

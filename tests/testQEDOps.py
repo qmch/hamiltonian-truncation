@@ -89,36 +89,37 @@ class TestMasslessSpinors(unittest.TestCase):
     def testStepFunction(self):
         # test the step function behavior in the massless limit
         
-        # the massless u-spinor for positive n should be [sqrt(2E),0]
-        self.assertEqual(np.sqrt(2*self.E),self.myUSpinor[0])
-        self.assertEqual(0,self.myUSpinor[1])
+        # the massless u-spinor for positive n (right-mover) should be [0,sqrt(2E)]
+        self.assertEqual(0,self.myUSpinor[0])
+        self.assertEqual(np.sqrt(2*self.E),self.myUSpinor[1])
         
-        # the massless v-spinor for positive n should be [sqrt(2E),0]
-        self.assertEqual(np.sqrt(2*self.E),self.myVSpinor[0])
-        self.assertEqual(0,self.myVSpinor[1])
+        # the massless v-spinor for positive n should be [0,-sqrt(2E)]
+        self.assertEqual(0,self.myVSpinor[0])
+        self.assertEqual(-np.sqrt(2*self.E),self.myVSpinor[1])
         
-        # the massless u-spinor for positive n should be [0, sqrt(2E)]
-        self.assertEqual(0,self.myUSpinor2[0])
-        self.assertEqual(np.sqrt(2*self.E),self.myUSpinor2[1])
+        # the massless u-spinor for negative n should be [sqrt(2E),0]
+        self.assertEqual(np.sqrt(2*self.E),self.myUSpinor2[0])
+        self.assertEqual(0,self.myUSpinor2[1])
         
-        # the massless u-spinor for positive n should be [0, -sqrt(2E)]
-        self.assertEqual(0,self.myVSpinor2[0])
-        self.assertEqual(-np.sqrt(2*self.E),self.myVSpinor2[1])
+        # the massless v-spinor for negative n should be [sqrt(2E),0]
+        self.assertEqual(np.sqrt(2*self.E),self.myVSpinor2[0])
+        self.assertEqual(0,self.myVSpinor2[1])
+
     
     def testStepFunctionNormed(self):
         # test the step function behavior in the massless limit after
         # normalizing by a factor of sqrt(2E)
-        self.assertEqual(1.,self.myUSpinorNormed[0])
-        self.assertEqual(0,self.myUSpinorNormed[1])
+        self.assertEqual(0.,self.myUSpinorNormed[0])
+        self.assertEqual(1.,self.myUSpinorNormed[1])
         
-        self.assertEqual(1.,self.myVSpinorNormed[0])
-        self.assertEqual(0,self.myVSpinorNormed[1])
+        self.assertEqual(0.,self.myVSpinorNormed[0])
+        self.assertEqual(-1.,self.myVSpinorNormed[1])
         
-        self.assertEqual(0,self.myUSpinor2Normed[0])
-        self.assertEqual(1.,self.myUSpinor2Normed[1])
+        self.assertEqual(1.,self.myUSpinor2Normed[0])
+        self.assertEqual(0.,self.myUSpinor2Normed[1])
         
-        self.assertEqual(0,self.myVSpinor2Normed[0])
-        self.assertEqual(-1.,self.myVSpinor2Normed[1])
+        self.assertEqual(1.,self.myVSpinor2Normed[0])
+        self.assertEqual(0.,self.myVSpinor2Normed[1])
         
 class TestFermionOperator(unittest.TestCase):
     def setUp(self):
