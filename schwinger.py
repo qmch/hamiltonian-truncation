@@ -485,7 +485,7 @@ class Schwinger():
         # a minus sign is needed for the delta conditions with this convention
         # since we have a_k1 and a^\dagger_{-k2}
         if deltacondition:
-            mask = momenta[:,deltacondition[0]-1] == momenta[:,deltacondition[1]-1]
+            mask = momenta[:,deltacondition[0]-1] == -momenta[:,deltacondition[1]-1]
             momenta = momenta[mask]
             
         for kvals in momenta:
@@ -508,10 +508,10 @@ class Schwinger():
         for kvals in momenta:
             spinorfactor = (firstspinor(kvals[0],kvals[1])
                             * secondspinor(kvals[2],kvals[3]))
-            #print(firstspinor(kvals[0],kvals[1]))
-            #print(secondspinor(kvals[2],kvals[3]))
-            #print(spinorfactor)
-            #print(kvals)
+            print(firstspinor(kvals[0],kvals[1]))
+            print(secondspinor(kvals[2],kvals[3]))
+            print(spinorfactor)
+            print(kvals)
             ksquared = 1/(kvals[0]+kvals[1])**2
             #creation operators get the minus sign on k
             ops += [FermionOperator(-kvals[np.array(clist,dtype=int)-1],
@@ -551,9 +551,9 @@ class Schwinger():
         ops = []
         
         adagger_a_adagger_a_4 = self.makeInteractionOps([1,3],[2,4],[],[],
-                                                       nmax=nmax,
-                                                       coeff=-1.,
-                                                       spinors="uuuu")
+                                                        nmax=nmax,
+                                                        coeff=-1.,
+                                                        spinors="uuuu")
         ops += adagger_a_adagger_a_4
         
         adagger_a_adagger_a_2 = self.makeInteractionOps([1],[4],[],[],
@@ -575,9 +575,9 @@ class Schwinger():
         ops += adagger_a_adagger_bdagger_2
         
         adagger_bdagger_adaggger_a_4 = self.makeInteractionOps([1,3],[4],[2],[],
-                                                               nmax=nmax,
-                                                               coeff=-1.,
-                                                               spinors="uvuu")
+                                                                nmax=nmax,
+                                                                coeff=-1.,
+                                                                spinors="uvuu")
         ops += adagger_bdagger_adaggger_a_4
         
         adagger_a_b_bdagger_4 = self.makeInteractionOps([1],[2],[4],[3],
@@ -657,8 +657,8 @@ class Schwinger():
                                                         spinors="vuuv")
         ops += b_a_adagger_bdagger_2_2
         
-        #note: there is a total delta function term here but it just shifts
-        #the vacuum energy so we omit it. It would be delta_14 delta_23 vuuv.
+        # note: there is a total delta function term here but it just shifts
+        # the vacuum energy so we omit it. It would be delta_14 delta_23 vuuv.
         
         b_bdagger_b_bdagger_4 = self.makeInteractionOps([],[],[2,4],[1,3],
                                                         nmax=nmax,
