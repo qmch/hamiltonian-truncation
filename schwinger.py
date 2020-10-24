@@ -83,13 +83,13 @@ class Schwinger():
         self.basis = None
         self.fullBasis = None
 
-    def buildFullBasis(self,L,m,Emax):
+    def buildFullBasis(self,L,m,Emax,bcs="periodic"):
         """ Builds the full Hilbert space basis """
 
         self.L=float(L)
         self.m=float(m)
         
-        self.fullBasis = FermionBasis(self.L, Emax, self.m)
+        self.fullBasis = FermionBasis(self.L, Emax, self.m, bcs=bcs)
 
     # TO-DO: test this method. We only have one interaction term so it's just V
     def buildBasis(self,Emax):
@@ -101,7 +101,8 @@ class Schwinger():
         the original potential matrix and free Hamiltonian.
         """
 
-        self.basis = FermionBasis(self.L, Emax, self.m, nmax=self.fullBasis.nmax)
+        self.basis = FermionBasis(self.L, Emax, self.m, nmax=self.fullBasis.nmax,
+                                  bcs=self.fullBasis.bcs)
         # We use the vector length (nmax) of the full basis.
         # In this way we can compare elements between the two bases
         self.Emax = float(Emax)
@@ -265,11 +266,13 @@ class Schwinger():
         #print(potential.M.toarray())
         isSymmetric = (np.array_equal(potential.M.toarray(),
                                       potential.M.toarray().T))
-        if isSymmetric:
-            print("Matrix is symmetric")
+        assert isSymmetric, "Matrix not symmetric (hermitian)"
         
-        if np.any(np.diag(potential.M.toarray())):
-            print("nonzero diagonal entries")
+        # if isSymmetric:
+        #     print("Matrix is symmetric")
+        # 
+        # if np.any(np.diag(potential.M.toarray())):
+        #     print("nonzero diagonal entries")
         
         self.potential = potential
         # for each order (0,2,4) in phi
@@ -474,9 +477,9 @@ class Schwinger():
         """
         
         momenta = np.array([[k1,k2,k3,-k1-k2-k3]
-                            for k1 in range(-nmax,nmax+1)
-                            for k2 in range(-nmax,nmax+1)
-                            for k3 in range(-nmax,nmax+1)
+                            for k1 in np.arange(-nmax,nmax+1)
+                            for k2 in np.arange(-nmax,nmax+1)
+                            for k3 in np.arange(-nmax,nmax+1)
                             if k1 + k2 != 0 and abs(k1+k2+k3) <= nmax
                             ])
         
@@ -487,10 +490,10 @@ class Schwinger():
         if deltacondition:
             mask = momenta[:,deltacondition[0]-1] == -momenta[:,deltacondition[1]-1]
             momenta = momenta[mask]
-            
-        for kvals in momenta:
-            assert(kvals[2]+kvals[3] != 0)
-            assert(kvals[0]+kvals[1] + kvals[2] + kvals[3] == 0)
+        
+        # for kvals in momenta:
+        #     assert(kvals[2]+kvals[3] != 0)
+        #     assert(kvals[0]+kvals[1] + kvals[2] + kvals[3] == 0)
 
         # return the right functions for the spinor inner products
         # with this convention, vs and udaggers get minus signs
@@ -508,10 +511,11 @@ class Schwinger():
         for kvals in momenta:
             spinorfactor = (firstspinor(kvals[0],kvals[1])
                             * secondspinor(kvals[2],kvals[3]))
-            print(firstspinor(kvals[0],kvals[1]))
-            print(secondspinor(kvals[2],kvals[3]))
-            print(spinorfactor)
-            print(kvals)
+            if spinorfactor == 0: continue
+            # print(firstspinor(kvals[0],kvals[1]))
+            # print(secondspinor(kvals[2],kvals[3]))
+            # print(spinorfactor)
+            # print(kvals)
             ksquared = 1/(kvals[0]+kvals[1])**2
             #creation operators get the minus sign on k
             ops += [FermionOperator(-kvals[np.array(clist,dtype=int)-1],

@@ -159,14 +159,14 @@ class FermionOperator():
             # we have to anticommute past all the antiparticle creation ops
             # and the particle creation ops up to i
             norm *= (-1)**(np.sum(state.occs[:,1])+
-                           np.sum(state.occs[:i-state.nmin,0]))
+                           np.sum(state.occs[:int(i-state.nmin),0]))
         
         for i in self.antidlist:
             if state[i][1] == 0:
                 return(0,None)
             state[i][1] -= 1
             # anticommute past the antiparticle creation ops up to i
-            norm *= (-1)**(np.sum(state.occs[:i-state.nmin,1]))
+            norm *= (-1)**(np.sum(state.occs[:int(i-state.nmin),1]))
         
         for i in self.clist:
             # by Pauli exclusion, states can have at most one excitation
@@ -177,7 +177,7 @@ class FermionOperator():
             # anticommute past all the antiparticle creation ops and the
             # particle creation ops through i
             norm *= (-1)**(np.sum(state.occs[:,1])+
-                           np.sum(state.occs[:i-state.nmin,0]))
+                           np.sum(state.occs[:int(i-state.nmin),0]))
         
         
         for i in self.anticlist:
@@ -185,7 +185,7 @@ class FermionOperator():
                 return (0,None)
             state[i][1] += 1
             # anticommute past the antiparticle creation ops
-            norm *= (-1)**(np.sum(state.occs[:i-state.nmin,1]))
+            norm *= (-1)**(np.sum(state.occs[:int(i-state.nmin),1]))
         
         # We never pick up a nontrivial normalization factor for fermionic 
         # states since the occupation numbers are either one or zero.

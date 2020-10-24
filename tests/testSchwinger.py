@@ -35,7 +35,7 @@ class TestSchwinger(unittest.TestCase):
     def testGenerateOperators(self):
         #print(self.schwinger.fullBasis)
         ops = self.schwinger.generateOperators()
-        print(ops)
+        #print(ops)
         
     
     def testMatrix(self):

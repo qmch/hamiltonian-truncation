@@ -13,6 +13,11 @@ import math
 from statefuncs import omega, k
 from statefuncs import State, Basis, NotInBasis
 
+def half_floor(x):
+    if x >= math.floor(x) + 0.5:
+        return math.floor(x) + 0.5
+    return max(0,math.floor(x)-0.5)
+
 class FermionState():
     
     def __init__(self, particleOccs, antiparticleOccs, nmax,
@@ -47,14 +52,14 @@ class FermionState():
         self.nmin = self.nmax - self.size + 1
         self.fast = fast
         
+        if fast:
+            return
+
         wavenum = np.arange(self.nmin, self.nmax+1)
         self.totalWN = (wavenum*np.transpose(self.occs)).sum()
         
         self.__parityEigenstate = (self.size == 2*self.nmax + 1
                                    and np.array_equal(self.occs[::-1],self.occs))
-        
-        if fast == True:
-            return
 
         self.netCharge = self.particleOccs.sum() - self.antiparticleOccs.sum()
 
@@ -76,12 +81,13 @@ class FermionState():
         self.energy = (energies*np.transpose(self.occs)).sum()
         self.momentum = (2.*pi/self.L)*self.totalWN
     
+    # the second behavior here is for checking states up to parity
     def __eq__(self, other):
         return np.array_equal(self.occs,other.occs) or np.array_equal(self.occs,other.occs[::-1])
 
     def __getitem__(self, wn):
         """ Returns the occupation numbers corresponding to a wave number"""
-        return self.occs[wn - self.nmin]
+        return self.occs[int(wn - self.nmin)]
 
     def __hash__(self):
         """Needed for construction of state lookup dictionaries"""
@@ -105,7 +111,7 @@ class FermionState():
             self.momentum = (2.*pi/self.L)*self.totalWN
             #should we update parity eigenstate too? probably - IL
         
-        self.occs[wn-self.nmin] = n
+        self.occs[int(wn-self.nmin)] = n
     
     def parityReversed(self):
         """ Reverse under P parity """
@@ -117,16 +123,21 @@ class FermionState():
 class FermionBasis(Basis):
     """ Generic list of fermionic basis elements sorted in energy. """
     
-    def __init__(self, L, Emax, m, nmax=None):
+    def __init__(self, L, Emax, m, nmax=None, bcs="periodic"):
         """ nmax: if not None, forces the state vectors to have length 2nmax+1
-            K: field parity (+1 or -1)
         """
         self.L = L
         self.Emax = Emax
         self.m = m
         
+        assert bcs == "periodic" or bcs == "antiperiodic"
+        self.bcs = bcs
+        
         if nmax == None:
-            self.nmax = int(math.floor(sqrt((Emax/2.)**2.-m**2.)*self.L/(2.*pi)))
+            if bcs == "periodic":
+                self.nmax = int(math.floor(sqrt((Emax/2.)**2.-m**2.)*self.L/(2.*pi)))
+            elif bcs == "antiperiodic":
+                self.nmax = half_floor(sqrt((Emax/2.)**2.-m**2.)*self.L/(2.*pi))
         else:
             self.nmax = nmax
         
@@ -180,8 +191,15 @@ class FermionBasis(Basis):
                 
         # the max occupation number of the n=1 mode is either kmax divided 
         # by the momentum at n=1 or Emax/omega, whichever is less
-        maxN1 = min([math.floor(kmax/k(1,self.L)),
-                     math.floor(self.Emax/omega(1,self.L,self.m)),
+        # the 2 here accounts for that we can have a single particle and an 
+        # antiparticle in n=1
+        if self.bcs == "periodic":
+            seedN = 1
+        elif self.bcs == "antiperiodic":
+            seedN = 0.5
+        
+        maxN1 = min([math.floor(kmax/k(seedN,self.L)),
+                     math.floor(self.Emax/omega(seedN,self.L,self.m)),
                      2])
         
         if maxN1 <= 0:
@@ -191,14 +209,12 @@ class FermionBasis(Basis):
         else:
             nextOccs = [[0,0],[0,1],[1,0],[1,1]]
         
-        RMlist0 = [FermionState([occs[0]],[occs[1]],1,L=self.L,m=self.m,checkAtRest=False,
+        RMlist0 = [FermionState([occs[0]],[occs[1]],seedN,L=self.L,m=self.m,checkAtRest=False,
                          checkChargeNeutral=False) for occs in nextOccs]
         # seed list of RM states,all possible n=1 mode occupation numbers
         
-        # note: we may want to change this to only odd modes if we impose
-        # antiperiodic bcs, or just remove the zero mode.
         
-        for n in range(2,self.nmax+1): #go over all other modes
+        for n in np.arange(seedN+1,self.nmax+1): #go over all other modes
             RMlist1=[] #we will take states out of RMlist0, augment them and add to RMlist1
             for RMstate in RMlist0: # cycle over all RMstates
                 p0 = RMstate.momentum
@@ -229,17 +245,14 @@ class FermionBasis(Basis):
                 #print(f"RMstate occs are {RMstate.occs}")
                 for nextOccs in nextOccsList:
                     longerstate = np.append(RMstate.occs,[nextOccs],axis=0)
-                    #print(longerstate)
-                    #longerstate = numpy.append(longerstate,N)
                     RMlist1.append(FermionState(longerstate[:,0],
                                                 longerstate[:,1],
-                                                nmax=len(longerstate),
-                                                L=self.L,m=self.m,
+                                                nmax=n,L=self.L,m=self.m,
                                                 checkAtRest=False,
                                                 checkChargeNeutral=False))
             #RMlist1 created, copy it back to RMlist0
             RMlist0 = RMlist1
-            
+        
         self.__RMlist = RMlist0 #save list of RMstates in an internal variable 
     
     def __divideRMlist(self):
@@ -248,21 +261,28 @@ class FermionBasis(Basis):
         also each sublist is ordered in energy"""
         
         self.__nRMmax=max([RMstate.totalWN for RMstate in self.__RMlist])
-        self.__RMdivided = [[] for ntot in range(self.__nRMmax+1)] #initialize list of lists
+        if self.bcs == "periodic":
+            self.__RMdivided = [[] for ntot in range(self.__nRMmax+1)] #initialize list of lists
+        elif self.bcs == "antiperiodic":
+            self.__RMdivided = [[] for ntot in np.arange(self.__nRMmax*2+2)] #initialize list of lists
         for RMstate in self.__RMlist: #go over RMstates and append them to corresponding sublists
-            self.__RMdivided[RMstate.totalWN].append(RMstate)
+            if self.bcs == "periodic":
+                self.__RMdivided[RMstate.totalWN].append(RMstate)
+            elif self.bcs == "antiperiodic":
+                self.__RMdivided[int(RMstate.totalWN*2)].append(RMstate)
         
         #now sort each sublist in energy
         for RMsublist in self.__RMdivided:
             RMsublist.sort(key=attrgetter('energy'))
         
-    
+    # should we revise this to be more efficient about generating
+    # only charge zero states?
     # finally function which builds the basis        
     def __buildBasis(self):
         """ creates basis of states of total momentum zero and energy <=Emax """
         self.__buildRMlist()
         self.__divideRMlist()
-
+        
         statelist = []
 
         for nRM,RMsublist in enumerate(self.__RMdivided):
@@ -275,6 +295,19 @@ class FermionBasis(Basis):
                     if deltaE < 0: #if this happens, we can break since subsequent LMstates have even higherenergy (RMsublist is ordered in energy)
                         break
                     
+                    if self.bcs == "antiperiodic":
+                        #there is no zero mode with half integer n
+                        newOccs = np.array((LMstate.occs[::-1]).tolist()
+                                           + RMstate.occs.tolist())
+                        state = FermionState(newOccs[:,0],newOccs[:,1],
+                                             nmax=self.nmax,L=self.L,m=self.m,
+                                             checkAtRest=True,
+                                             checkChargeNeutral=False)
+                        if state.isNeutral():
+                            statelist.append(state)
+                        continue
+                    else:
+                        assert self.bcs == "periodic"
                     # for massless excitations we can put the max of 2
                     # excitations in the zero mode.
                     # this is different from the bosonic case where

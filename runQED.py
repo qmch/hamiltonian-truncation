@@ -13,6 +13,7 @@ import numpy as np
 import time
 from scipy.constants import pi
 from math import isclose
+import matplotlib.pyplot as plt
 
 def main(argv):
     
@@ -47,14 +48,23 @@ def main(argv):
     
     a.buildBasis(a.fullBasis.Emax)
     
-    for gval in [1]:#[0,0.2,0.4,0.6,0.8,1]:
+    mass_gap = []
+    for gval in np.arange(1,15,0.5):
         computeVacuumEnergy(a,g=gval)
         spectrum = a.spectrum()
         print(f"Spectrum: {spectrum}")
+        print(f"Normalized mass gap: {spectrum[1]/gval}")
+        mass_gap.append(spectrum[1]/gval)
     
+    plt.xlabel("g")
+    plt.ylabel("m/g")
+    plt.title("R=1,lmax=5")
+    plt.plot(np.arange(1,15,0.5),mass_gap)
+    plt.savefig('normalized_mass_gap_vs_g.pdf')
+    plt.show()
     
-    for index in np.arange(1,len(spectrum),2):
-        assert(isclose(spectrum[index],spectrum[index+1])), f"{spectrum[index]} !={spectrum[index+1]}"
+    #for index in np.arange(1,len(spectrum),2):
+    #    assert(isclose(spectrum[index],spectrum[index+1])), f"{spectrum[index]} !={spectrum[index+1]}"
     
     
     #print(a.h0)
@@ -79,16 +89,16 @@ def computeVacuumEnergy(schwinger, g):
     A float representing the vacuum energy for this set of parameters.
 
     """
-    sigma = -1.#-30.
-    neigs = 4
+    sigma = -30.#-30.
+    neigs = 5
 
     schwinger.setcouplings(g)
 
     print(f"Computing raw eigenvalues for g4 = {g}")
 
     schwinger.computeHamiltonian(ren=False)
-    print("Hamiltonian:")
-    print(schwinger.H.toarray())
+    #print("Hamiltonian:")
+    #print(schwinger.H.toarray())
 
     schwinger.computeEigval(sigma=sigma, n=neigs, ren=False)
         
