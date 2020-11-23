@@ -215,7 +215,7 @@ class Schwinger():
             then this is just the matrix form of the operator.
         """
         
-        psidaggerpsi = self.generateOperators()
+        #psidaggerpsi = self.generateOperators()
         
         # can change this to enumerate if we want to specialize to diagonal
         # operators
@@ -226,7 +226,7 @@ class Schwinger():
         # maybe later should just enumerate all 16 ops by hand? Seems like
         # a pain though.
         
-        allops = self.generateOperators2(nmax)
+        allops = self.generateOperators3(nmax)
         
         potential = Matrix(lookupBasis,basis)
         
@@ -753,6 +753,184 @@ class Schwinger():
                                                     spinors="vuvv")
         ops += b_a_b_bdagger_2_1
         '''
+        b_a_b_bdagger_2_2 = self.makeInteractionOps([],[2],[],[3],
+                                                    nmax=nmax,
+                                                    coeff=-1.,
+                                                    deltacondition=(1,4),
+                                                    spinors="vuvv")
+        ops += b_a_b_bdagger_2_2
+        
+        return ops
+    
+    def generateOperators3(self,nmax):
+        """
+        
+
+        Parameters
+        ----------
+        nmax : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        """
+        operators are named by their non-normal ordered versions
+        and how many basic operators are in the final version,
+        e.g. this first operator is the normal ordered version of
+        adagger a adagger a, which looks like adagger adagger a a
+        and there is also a 2-operator term adagger a from the one anticommutation
+        """
+        
+        ops = []
+        
+        adagger_a_adagger_a_4 = self.makeInteractionOps([1,3],[2,4],[],[],
+                                                        nmax=nmax,
+                                                        coeff=-1.,
+                                                        spinors="uuuu")
+        ops += adagger_a_adagger_a_4
+        
+        adagger_a_adagger_a_2 = self.makeInteractionOps([1],[4],[],[],
+                                                        nmax=nmax,
+                                                        deltacondition=(2,3),
+                                                        spinors="uuuu")
+        ops += adagger_a_adagger_a_2
+        
+        adagger_a_adagger_bdagger_4 = self.makeInteractionOps([1,3],[2],[4],[],
+                                                              nmax=nmax,
+                                                              coeff=2.,
+                                                              spinors="uuuv")
+        ops += adagger_a_adagger_bdagger_4
+        
+        adagger_a_adagger_bdagger_2 = self.makeInteractionOps([1],[],[4],[],
+                                                              nmax=nmax,
+                                                              coeff=-1.,
+                                                              deltacondition=(2,3),
+                                                              spinors="uuuv")
+        ops += adagger_a_adagger_bdagger_2
+        
+        # adagger_bdagger_adaggger_a_4 = self.makeInteractionOps([1,3],[4],[2],[],
+        #                                                         nmax=nmax,
+        #                                                         coeff=-1.,
+        #                                                         spinors="uvuu")
+        # ops += adagger_bdagger_adaggger_a_4
+        
+        adagger_a_b_bdagger_4 = self.makeInteractionOps([1],[2],[4],[3],
+                                                        nmax=nmax,
+                                                        coeff=2.,
+                                                        spinors="uuvv")
+        ops += adagger_a_b_bdagger_4
+        
+        adagger_bdagger_b_bdagger_4 = self.makeInteractionOps([1],[],[2,4],[3],
+                                                              nmax=nmax,
+                                                              coeff=-2.,
+                                                              spinors="uvvv")
+        ops += adagger_bdagger_b_bdagger_4
+        
+        adagger_bdagger_adagger_bdagger_4 = self.makeInteractionOps([1,3],[],[2,4],[],
+                                                                    nmax=nmax,
+                                                                    coeff=-1.,
+                                                                    spinors="uvuv")
+        ops += adagger_bdagger_adagger_bdagger_4
+        
+        # b_bdagger_adagger_bdagger_4 = self.makeInteractionOps([3],[],[2,4],[1],
+        #                                                       nmax=nmax,
+        #                                                       spinors="vvuv")
+        # ops += b_bdagger_adagger_bdagger_4
+        
+        b_bdagger_adagger_bdagger_2_1 = self.makeInteractionOps([3],[],[2],[],
+                                                                nmax=nmax,
+                                                                deltacondition=(1,4),
+                                                                spinors="vvuv")
+        ops += b_bdagger_adagger_bdagger_2_1
+        
+        adagger_bdagger_b_a_4 = self.makeInteractionOps([1],[4],[2],[3],
+                                                        nmax=nmax,
+                                                        coeff=-2.,
+                                                        spinors="uvvu")
+        ops += adagger_bdagger_b_a_4
+        
+        # b_a_adagger_bdagger_4 = self.makeInteractionOps([3],[2],[4],[1],
+        #                                                 nmax=nmax,
+        #                                                 coeff=-1.,
+        #                                                 spinors="vuuv")
+        # ops += b_a_adagger_bdagger_4
+        
+        b_a_adagger_bdagger_2_1 = self.makeInteractionOps([3],[2],[],[],
+                                                          nmax=nmax,
+                                                          coeff=-1.,
+                                                          deltacondition=(1,4),
+                                                          spinors="vuuv")
+        ops += b_a_adagger_bdagger_2_1
+        
+        b_a_adagger_bdagger_2_2 = self.makeInteractionOps([],[],[4],[1],
+                                                        nmax=nmax,
+                                                        coeff=-1.,
+                                                        deltacondition=(2,3),
+                                                        spinors="vuuv")
+        ops += b_a_adagger_bdagger_2_2
+        
+        # note: there is a total delta function term here but it just shifts
+        # the vacuum energy so we omit it. It would be delta_14 delta_23 vuuv.
+        
+        b_bdagger_b_bdagger_4 = self.makeInteractionOps([],[],[2,4],[1,3],
+                                                        nmax=nmax,
+                                                        coeff=-1.,
+                                                        spinors="vvvv")
+        ops += b_bdagger_b_bdagger_4
+        
+        b_bdagger_b_bdagger_2_1 = self.makeInteractionOps([],[],[2],[3],
+                                                        nmax=nmax,
+                                                        deltacondition=(1,4),
+                                                        spinors="vvvv")
+        ops += b_bdagger_b_bdagger_2_1
+        
+        #next the hermitian conjugate terms
+        #we can probably do this with the off diagonal trick later
+        
+        b_a_adagger_a_4 = self.makeInteractionOps([3],[2,4],[],[1],
+                                                  nmax=nmax,
+                                                  coeff=2.,
+                                                  spinors="vuuu")
+        ops += b_a_adagger_a_4
+        
+        b_a_adagger_a_2 = self.makeInteractionOps([],[4],[],[1],
+                                                  nmax=nmax,
+                                                  deltacondition=(2,3),
+                                                  spinors="vuuu")
+        ops += b_a_adagger_a_2
+        
+        # adagger_a_b_a_4 = self.makeInteractionOps([1],[2,4],[],[3],
+        #                                           nmax=nmax,
+        #                                           coeff=-1.,
+        #                                           spinors="uuvu")
+        # ops += adagger_a_b_a_4
+        
+        # b_bdagger_adagger_a_4 = self.makeInteractionOps([3],[4],[2],[1],
+        #                                                 nmax=nmax,
+        #                                                 spinors="vvuu")
+        # ops += b_bdagger_adagger_a_4
+        
+        b_bdagger_b_a_4 = self.makeInteractionOps([],[4],[2],[1,3],
+                                                  nmax=nmax,
+                                                  coeff=-2.,
+                                                  spinors="vvvu")
+        ops += b_bdagger_b_a_4
+        
+        b_a_b_a_4 = self.makeInteractionOps([],[2,4],[],[1,3],
+                                            nmax=nmax,
+                                            coeff=-1.,
+                                            spinors="vuvu")
+        ops += b_a_b_a_4
+        
+        # b_a_b_bdagger_4 = self.makeInteractionOps([],[2],[4],[1,3],
+        #                                           nmax=nmax,
+        #                                           spinors="vuvv")
+        # ops += b_a_b_bdagger_4
+        
         b_a_b_bdagger_2_2 = self.makeInteractionOps([],[2],[],[3],
                                                     nmax=nmax,
                                                     coeff=-1.,

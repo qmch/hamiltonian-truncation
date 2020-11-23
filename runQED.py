@@ -33,7 +33,7 @@ def main(argv):
     
     a = schwinger.Schwinger()
     
-    a.buildFullBasis(2*pi*R, m, Emax)
+    a.buildFullBasis(2*pi*R, m, Emax, bcs="periodic")
 
     print(f"Basis size: {a.fullBasis.size}")
     # print(f"Basis elements: {a.fullBasis}")
@@ -49,19 +49,19 @@ def main(argv):
     a.buildBasis(a.fullBasis.Emax)
     
     mass_gap = []
-    for gval in np.arange(1,15,0.5):
+    for gval in [1]:# np.arange(1,15,0.5):
         computeVacuumEnergy(a,g=gval)
         spectrum = a.spectrum()
         print(f"Spectrum: {spectrum}")
         print(f"Normalized mass gap: {spectrum[1]/gval}")
         mass_gap.append(spectrum[1]/gval)
     
-    plt.xlabel("g")
-    plt.ylabel("m/g")
-    plt.title("R=1,lmax=5")
-    plt.plot(np.arange(1,15,0.5),mass_gap)
-    plt.savefig('normalized_mass_gap_vs_g.pdf')
-    plt.show()
+    # plt.xlabel("g")
+    # plt.ylabel("m/g")
+    # plt.title("R=1,lmax=5")
+    # plt.plot(np.arange(1,15,0.5),mass_gap)
+    # plt.savefig('normalized_mass_gap_vs_g.pdf')
+    # plt.show()
     
     #for index in np.arange(1,len(spectrum),2):
     #    assert(isclose(spectrum[index],spectrum[index+1])), f"{spectrum[index]} !={spectrum[index+1]}"
