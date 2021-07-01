@@ -38,7 +38,7 @@ def calculateAxialChargeArray(basis):
 class TestQAxial(unittest.TestCase):
     def setUp(self):
         self.schwinger = Schwinger()
-        self.schwinger.buildFullBasis(Emax=13., m=0, L=2*pi, bcs="antiperiodic")
+        self.schwinger.buildFullBasis(Emax=3., m=0, L=2*pi, bcs="antiperiodic")
         
     
     def testMatrix(self):
@@ -50,8 +50,10 @@ class TestQAxial(unittest.TestCase):
         self.schwinger.buildMatrix()
         
         axialCharge = calculateAxialChargeArray(self.schwinger.fullBasis)
-        #print(axialCharge)
-        print(f"Basis size: {axialCharge.size}")
+        
+        if verbose:
+            print(axialCharge)
+            print(f"Basis size: {axialCharge.size}")
         potential = self.schwinger.potential.M.toarray()
         
         for i in np.arange(axialCharge.size):

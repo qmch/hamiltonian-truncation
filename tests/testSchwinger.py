@@ -52,6 +52,8 @@ class TestSchwinger(unittest.TestCase):
     
     def testMatrix(self):
         verbose = False
+        if verbose:
+            print("Beginning Schwinger matrix test")
         
         start = time.time()        
         
