@@ -28,51 +28,38 @@ def calculateAxialCharge(state):
     
     return total
 
-class TestSchwinger(unittest.TestCase):
+def calculateAxialChargeArray(basis):
+    axialCharge = np.empty(basis.size)
+    for i in range(basis.size):
+        axialCharge[i] = calculateAxialCharge(basis[i])
+    #print(axialCharge)
+    return axialCharge
+
+class TestQAxial(unittest.TestCase):
     def setUp(self):
         self.schwinger = Schwinger()
-        self.schwinger.buildFullBasis(Emax=3., m=0, L=2*pi)
-    
-    def testBasisElements(self):
-        #print(self.schwinger.fullBasis)
-        
-        expectedOccs = [([0,0,0],[0,0,0]), ([0,1,0],[0,1,0]),
-                          ([1,0,0],[0,0,1]),([1,1,0],[0,1,1]),
-                          ([0,0,1],[1,0,0]),([0,1,1],[1,1,0])]
-        
-        for i, state in enumerate(self.schwinger.fullBasis):
-            assert_array_equal(state.particleOccs,expectedOccs[i][0])
-            assert_array_equal(state.antiparticleOccs,expectedOccs[i][1])
-    
-    def testGenerateOperators(self):
-        #print(self.schwinger.fullBasis)
-        ops = self.schwinger.generateOperators()
-        #print(ops)
+        self.schwinger.buildFullBasis(Emax=13., m=0, L=2*pi, bcs="antiperiodic")
         
     
     def testMatrix(self):
         verbose = False
         
-        start = time.time()        
-        
-        #print(a.fullBasis)
-        
-        #self.assertEqual(len(a.fullBasis[1]),len(expected_basis))
-        
-        #for index, occs in enumerate(expected_basis):
-        #    self.assertEqual(a.fullBasis[1][index].occs, occs)
-        
-        #ops = a.generateOperators()
-        """
-        for key in ops.keys():
-            for op in ops[key]:
-                print(f"Coeff:{op.coeff}, ops:{op}")
-        """
+        start = time.time()
         
         #print([state.occs for state in a.fullBasis[-1]])
         self.schwinger.buildMatrix()
         
-        print(f"Runtime: {time.time()-start}")
+        axialCharge = calculateAxialChargeArray(self.schwinger.fullBasis)
+        #print(axialCharge)
+        print(f"Basis size: {axialCharge.size}")
+        potential = self.schwinger.potential.M.toarray()
+        
+        for i in np.arange(axialCharge.size):
+            for j in np.arange(axialCharge.size):
+                if axialCharge[i] != axialCharge[j]:
+                    assert(potential[i,j]==0)
+        
+        #print(f"Runtime: {time.time()-start}")
         
         if verbose:
             print("Free Hamiltonian:")
@@ -84,8 +71,9 @@ class TestSchwinger(unittest.TestCase):
             print(self.schwinger.potential.M.toarray())
         
     # def testAxialCharge(self):
-    #     for n in range(6):
-    #         print(calculateAxialCharge(self.schwinger.fullBasis[n]))
+    #     axialCharge = calculateAxialChargeArray(self.schwinger.fullBasis)
+        
+        
     
 if __name__ == '__main__':
     unittest.main()

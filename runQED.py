@@ -19,7 +19,7 @@ def main(argv):
     
     #if there are too few arguments, print the right syntax and exit
     if len(argv) < 3:
-        print("python genMatrix.py <R> <Emax>")
+        print("python runQED.py <R> <Emax>")
         sys.exit(-1)
     
     print("Beginning execution.")
@@ -30,28 +30,34 @@ def main(argv):
     Emax = float(argv[2])
     #mass
     m = 0.
+    verbose = False
     
     a = schwinger.Schwinger()
     
-    a.buildFullBasis(2*pi*R, m, Emax, bcs="periodic")
+    a.buildFullBasis(2*pi*R, m, Emax, bcs="antiperiodic")
 
     print(f"Basis size: {a.fullBasis.size}")
-    # print(f"Basis elements: {a.fullBasis}")
+    if verbose:
+        print(f"Basis elements: {a.fullBasis}")
 
     #set the file name for saving the generated matrix
     fstr = "Emax="+str(a.fullBasis.Emax)+"_L="+str(a.L)
 
     a.buildMatrix()
     
-    print("Potential:")
-    print(f"{a.potential.M.toarray()}")
+    if verbose:
+        print("Potential:")
+        print(f"{a.potential.M.toarray()}")
     
     a.buildBasis(a.fullBasis.Emax)
+
+    
     
     mass_gap = []
     for gval in [1]:# np.arange(1,15,0.5):
         computeVacuumEnergy(a,g=gval)
         spectrum = a.spectrum()
+        #print(f"H: {a.H.toarray()}")
         print(f"Spectrum: {spectrum}")
         print(f"Normalized mass gap: {spectrum[1]/gval}")
         mass_gap.append(spectrum[1]/gval)
@@ -90,7 +96,7 @@ def computeVacuumEnergy(schwinger, g):
 
     """
     sigma = -30.#-30.
-    neigs = 5
+    neigs = 3
 
     schwinger.setcouplings(g)
 

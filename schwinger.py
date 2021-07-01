@@ -324,16 +324,9 @@ class Schwinger():
         """ Saves the free Hamiltonian and potential matrices to file """
 
         t = (fname, self.L, self.m, \
-            self.fullBasis[1].Emax, self.fullBasis[1].nmax, \
-            self.fullBasis[-1].Emax, self.fullBasis[-1].nmax, \
-            self.h0[1].M.data,self.h0[1].M.row,self.h0[1].M.col, \
-            self.potential[1][0].M.data,self.potential[1][0].M.row,self.potential[1][0].M.col, \
-            self.potential[1][2].M.data,self.potential[1][2].M.row,self.potential[1][2].M.col, \
-            self.potential[1][4].M.data,self.potential[1][4].M.row,self.potential[1][4].M.col, \
-            self.h0[-1].M.data,self.h0[-1].M.row,self.h0[-1].M.col, \
-            self.potential[-1][0].M.data,self.potential[-1][0].M.row,self.potential[-1][0].M.col, \
-            self.potential[-1][2].M.data,self.potential[-1][2].M.row,self.potential[-1][2].M.col, \
-            self.potential[-1][4].M.data,self.potential[-1][4].M.row,self.potential[-1][4].M.col \
+            self.fullBasis.Emax, self.fullBasis.nmax, self.fullBasis.bcs, \
+            self.h0.M.data,self.h0.M.row,self.h0.M.col, \
+            self.potential.M.data,self.potential.M.row,self.potential.M.col, \
             )
         scipy.savez(*t)
 
@@ -344,22 +337,24 @@ class Schwinger():
         self.L = f['arr_0'].item()
         self.m = f['arr_1'].item()
 
-        Emax = {1:f['arr_2'].item(), -1:f['arr_4'].item()}
-        nmax = {1:f['arr_3'].item(), -1:f['arr_5'].item()}
-                
-        for i, k in enumerate((1,-1)):
-            n = 12
-            z = 6
-                
-            self.buildFullBasis(L=self.L, m=self.m, Emax=Emax[k], k=k)
-
-            basisI = self.fullBasis[k]
-            basisJ = self.fullBasis[k]
-
-            self.h0[k] = Matrix(basisI, basisJ, scipy.sparse.coo_matrix((f['arr_'+(str(z+i*n))], (f['arr_'+(str(z+1+i*n))], f['arr_'+(str(z+2+i*n))])), shape=(basisI.size, basisJ.size)))
-            self.potential[k][0] = Matrix(basisI, basisJ, scipy.sparse.coo_matrix((f['arr_'+(str(z+3+i*n))], (f['arr_'+(str(z+4+i*n))], f['arr_'+(str(z+5+i*n))])), shape=(basisI.size, basisJ.size)))
-            self.potential[k][2] = Matrix(basisI, basisJ, scipy.sparse.coo_matrix((f['arr_'+(str(z+6+i*n))], (f['arr_'+(str(z+7+i*n))], f['arr_'+(str(z+8+i*n))])), shape=(basisI.size, basisJ.size)))
-            self.potential[k][4] = Matrix(basisI, basisJ, scipy.sparse.coo_matrix((f['arr_'+(str(z+9+i*n))], (f['arr_'+(str(z+10+i*n))], f['arr_'+(str(z+11+i*n))])), shape=(basisI.size, basisJ.size)))
+        Emax = f['arr_2'].item()
+        nmax = f['arr_3'].item()
+        bcs = f['arr_4'].item()
+        
+        self.buildFullBasis(L=self.L, m=self.m, Emax=Emax, bcs=bcs)
+        
+        basisI = self.fullBasis
+        basisJ = self.fullBasis
+        
+        print(basisI.size)
+        
+        self.h0 = Matrix(basisI, basisJ,
+                         scipy.sparse.coo_matrix((f['arr_5'], (f['arr_6'], f['arr_7'])),
+                                                 shape=(basisI.size, basisJ.size)))
+        
+        self.potential = Matrix(basisI, basisJ,
+                                scipy.sparse.coo_matrix((f['arr_8'], (f['arr_9'], f['arr_10'])),
+                                                        shape=(basisI.size, basisJ.size)))
  
     def generateOperators(self):
         """
