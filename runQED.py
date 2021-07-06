@@ -34,7 +34,7 @@ def main(argv):
     
     a = schwinger.Schwinger()
     
-    a.buildFullBasis(2*pi*R, m, Emax, bcs="antiperiodic")
+    a.buildFullBasis(2*pi*R, m, Emax, bcs="periodic")
 
     print(f"Basis size: {a.fullBasis.size}")
     if verbose:

@@ -62,4 +62,4 @@ class TestDressedStateMethods(unittest.TestCase):
         state1[-1] = [0,1]
         self.assertAlmostEqual(state1.energy,2+omega0)
         
-        print(state1)
+        #print(state1)

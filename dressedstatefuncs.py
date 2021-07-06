@@ -12,10 +12,10 @@ from operator import attrgetter
 import math
 from statefuncs import omega, k
 from statefuncs import State, Basis, NotInBasis
-import qedstatefuncs
+from qedstatefuncs import FermionState, FermionBasis
 
 
-class DressedFermionState(qedstatefuncs.FermionState):
+class DressedFermionState(FermionState):
     
     def __init__(self, particleOccs, antiparticleOccs, zeromode, nmax,
                  L=None, m=None, fast=False, checkAtRest=True,
@@ -34,12 +34,12 @@ class DressedFermionState(qedstatefuncs.FermionState):
         """
         #assert m >= 0, "Negative or zero mass"
         #assert L > 0, "Circumference must be positive"
-        assert (zeromode >= 0, "zeromode eigenstate label should be >=0")
+        assert zeromode >= 0, "zeromode eigenstate label should be >=0"
         
         self.zeromode = zeromode
         self.omega0 = e_var/sqrt(pi)
         
-        qedstatefuncs.FermionState.__init__(self, particleOccs, antiparticleOccs, nmax,
+        FermionState.__init__(self, particleOccs, antiparticleOccs, nmax,
                                             L, m, fast, checkAtRest, checkChargeNeutral)
         
         if fast: return
@@ -49,6 +49,10 @@ class DressedFermionState(qedstatefuncs.FermionState):
     # removed behavior checking equality of states up to parity
     def __eq__(self, other):
         return np.array_equal(self.occs,other.occs) and self.zeromode == other.zeromode
+    
+    def __hash__(self):
+        """Needed for construction of state lookup dictionaries"""
+        return hash(tuple(np.append(np.reshape(self.occs,2*len(self.occs)),[self.zeromode])))
     
     def getAZeroMode(self):
         return self.zeromode
@@ -61,10 +65,11 @@ class DressedFermionState(qedstatefuncs.FermionState):
             self.energy += self.omega0*(n-self.zeromode)
         self.zeromode = n    
 
-class FermionBasis(Basis):
-    """ Generic list of fermionic basis elements sorted in energy. """
-    
-    def __init__(self, L, Emax, m, nmax=None, bcs="periodic"):
+class DressedFermionBasis(FermionBasis):
+    """ List of fermionic basis elements dressed with a zero-mode wavefunction"""
+    def __init__(self, L, Emax, m, nmax=None, bcs="periodic", q=1):
+        self.q = q
+        self.omega0 = q/sqrt(pi)
         """ nmax: if not None, forces the state vectors to have length 2nmax+1
         """
         self.L = L
@@ -93,23 +98,73 @@ class FermionBasis(Basis):
         self.reversedStatePos = { state : i for i, state in enumerate(self.reversedStateList) }
 
         self.size = len(self.stateList)
-    
-    def lookup(self, state):
-        """looks up the index of a state. If this is not present, tries to look up for its parity-reversed
         
-        Returns:
-            A tuple with the normalization factor c and the state index i
-        """
-        #rewritten to use if statements, which is syntactically somewhat cleaner
-        if (state in self.statePos):
-            i = self.statePos[state]
+    def __buildBasis(self):
+        """ creates basis of states of total momentum zero and energy <=Emax """
+        self.__buildRMlist()
+        self.__divideRMlist()
+        
+        statelist = []
 
-            return (1,i)
-        
-        if (state in self.reversedStatePos):
-            return (1,self.reversedStatePos[state])
-        
-        raise NotInBasis
+        for nRM,RMsublist in enumerate(self.__RMdivided):
+            for i, RMstate in enumerate(RMsublist):
+                ERM = RMstate.energy
+                for LMstate in RMsublist: # LM part of the state will come from the same sublist. We take the position of LMState to be greater or equal to the position of RMstate
+                    #we will just have to reverse it
+                    ELM = LMstate.energy
+                    deltaE = self.Emax - ERM - ELM
+                    if deltaE < 0: #if this happens, we can break since subsequent LMstates have even higherenergy (RMsublist is ordered in energy)
+                        break
+                    
+                    if self.bcs == "antiperiodic":
+                        #there is no zero mode with half integer n
+                        newOccs = np.array((LMstate.occs[::-1]).tolist()
+                                           + RMstate.occs.tolist())
+                        state = DressedFermionState(newOccs[:,0],newOccs[:,1],0,
+                                             nmax=self.nmax,L=self.L,m=self.m,
+                                             checkAtRest=True,
+                                             checkChargeNeutral=False)
+                        if state.isNeutral():
+                            statelist.append(state)
+                            addZeroModes(statelist, state.energy, newOccs)
+                                
+                        continue
+                    else:
+                        assert self.bcs == "periodic"
+                    # for massless excitations we can put the max of 2
+                    # excitations in the zero mode.
+                    # this is different from the bosonic case where
+                    # massless excitations carry no energy and the number
+                    # of zero mode excitations is unbounded.
+                    # we can manually set this to not add particles to the
+                    # zero mode by taking maxN0 = 0.
+                    if self.m != 0:
+                        maxN0 = min(int(math.floor(deltaE/self.m)),2)
+                    else:
+                        maxN0 = 2
+                    
+                    assert maxN0 in range(3)
+                    
+                    
+                    if maxN0 == 0:
+                        nextOccsList = [[0,0]]
+                    elif maxN0 == 1:
+                        nextOccsList = [[0,0],[0,1],[1,0]]
+                    else:
+                        nextOccsList = [[0,0],[0,1],[1,0],[1,1]]
+                    
+                    for nextOccs in nextOccsList:
+                        newOccs = np.array((LMstate.occs[::-1]).tolist()
+                                           + [nextOccs] + RMstate.occs.tolist())
+                        #print(newOccs)
+                        state = DressedFermionState(newOccs[:,0],newOccs[:,1],0,
+                                             nmax=self.nmax,L=self.L,m=self.m,
+                                             checkAtRest=True,
+                                             checkChargeNeutral=False)
+                        if state.isNeutral():
+                            statelist.append(state)
+                            self.addZeroModes(statelist, state.energy, newOccs)
+        return statelist
     
     def __buildRMlist(self):
         """ sets list of all right-moving states with particles of individual wave number 
@@ -215,71 +270,17 @@ class FermionBasis(Basis):
         #now sort each sublist in energy
         for RMsublist in self.__RMdivided:
             RMsublist.sort(key=attrgetter('energy'))
+    
+    def addZeroModes(self, statelist, state_energy, occs):
+        #print("start addZeromodes")
+        zeromodetemp = 1
+        deltaE_zeromode = self.Emax - state_energy
+        while (deltaE_zeromode > self.omega0):
+            #print(deltaE_zeromode)
+            state = DressedFermionState(occs[:,0],occs[:,1],zeromodetemp,
+                                             nmax=self.nmax,L=self.L,m=self.m)
+            statelist.append(state)
+            deltaE_zeromode -= self.omega0
+            zeromodetemp += 1
         
-    # should we revise this to be more efficient about generating
-    # only charge zero states?
-    # finally function which builds the basis        
-    def __buildBasis(self):
-        """ creates basis of states of total momentum zero and energy <=Emax """
-        self.__buildRMlist()
-        self.__divideRMlist()
-        
-        statelist = []
-
-        for nRM,RMsublist in enumerate(self.__RMdivided):
-            for i, RMstate in enumerate(RMsublist):
-                ERM = RMstate.energy
-                for LMstate in RMsublist: # LM part of the state will come from the same sublist. We take the position of LMState to be greater or equal to the position of RMstate
-                    #we will just have to reverse it
-                    ELM = LMstate.energy
-                    deltaE = self.Emax - ERM - ELM
-                    if deltaE < 0: #if this happens, we can break since subsequent LMstates have even higherenergy (RMsublist is ordered in energy)
-                        break
-                    
-                    if self.bcs == "antiperiodic":
-                        #there is no zero mode with half integer n
-                        newOccs = np.array((LMstate.occs[::-1]).tolist()
-                                           + RMstate.occs.tolist())
-                        state = FermionState(newOccs[:,0],newOccs[:,1],
-                                             nmax=self.nmax,L=self.L,m=self.m,
-                                             checkAtRest=True,
-                                             checkChargeNeutral=False)
-                        if state.isNeutral():
-                            statelist.append(state)
-                        continue
-                    else:
-                        assert self.bcs == "periodic"
-                    # for massless excitations we can put the max of 2
-                    # excitations in the zero mode.
-                    # this is different from the bosonic case where
-                    # massless excitations carry no energy and the number
-                    # of zero mode excitations is unbounded.
-                    # we can manually set this to not add particles to the
-                    # zero mode by taking maxN0 = 0.
-                    if self.m != 0:
-                        maxN0 = min(int(math.floor(deltaE/self.m)),2)
-                    else:
-                        maxN0 = 2
-                    
-                    assert maxN0 in range(3)
-                    
-                    
-                    if maxN0 == 0:
-                        nextOccsList = [[0,0]]
-                    elif maxN0 == 1:
-                        nextOccsList = [[0,0],[0,1],[1,0]]
-                    else:
-                        nextOccsList = [[0,0],[0,1],[1,0],[1,1]]
-                    
-                    for nextOccs in nextOccsList:
-                        newOccs = np.array((LMstate.occs[::-1]).tolist()
-                                           + [nextOccs] + RMstate.occs.tolist())
-                        #print(newOccs)
-                        state = FermionState(newOccs[:,0],newOccs[:,1],
-                                             nmax=self.nmax,L=self.L,m=self.m,
-                                             checkAtRest=True,
-                                             checkChargeNeutral=False)
-                        if state.isNeutral():
-                            statelist.append(state)
-
-        return statelist
+        return
