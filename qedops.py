@@ -12,6 +12,7 @@ from numpy import pi, sqrt, product
 from operator import attrgetter
 from statefuncs import omega, State, NotInBasis
 from qedstatefuncs import FermionState
+from dressedstatefuncs import DressedFermionState
 
 tol = 0.0001
 
@@ -114,7 +115,7 @@ class FermionOperator():
         return (str(self.clist) + " " + str(self.dlist) + " " + str(self.anticlist)
                 + " " + str(self.antidlist) + " " + str(self.coeff))
     
-    def _transformState(self, state0, returnCoeff=False):
+    def _transformState(self, state0, returnCoeff=False, dressed=False):
         """
         Applies the normal ordered operator to a given state.
         
@@ -142,9 +143,19 @@ class FermionOperator():
         if not self.uniqueOps:
             return (0,None)
         #make a copy of this state up to occupation numbers and nmax
-        state = FermionState(particleOccs=state0.occs[:,0],
-                             antiparticleOccs=state0.occs[:,1], nmax=state0.nmax,
+        #use DressedFermionState if the original state is dressed
+        #otherwise use FermionState
+        if state0.isDressed:
+            state = DressedFermionState(particleOccs=state0.occs[:,0],
+                             antiparticleOccs=state0.occs[:,1],
+                             zeromode=state0.getAZeroMode(),
+                             nmax=state0.nmax,
                              fast=True)
+        else:
+            state = FermionState(particleOccs=state0.occs[:,0],
+                                 antiparticleOccs=state0.occs[:,1],
+                                 nmax=state0.nmax,
+                                 fast=True)
         
         # note: there may be an easier way for fermionic states
         # however, these loops are short and fast, so NumPy shortcuts probably

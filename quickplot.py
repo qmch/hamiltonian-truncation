@@ -14,14 +14,14 @@ def powerlaw_offset(x, y0, a, n):
     return y0 + a*np.power(x,-n)
 
 def main():
-    lmax_vals = np.arange(1.5,8.5)
-    mass_gap = [1.040524324172413,
-                1.0178373805628915,
-                1.0099935792170385,
-                1.0063845297691891,
-                1.0064220663290975,
-                1.0032526281598741,
-                1.00326253048339]
+    # lmax_vals = np.arange(1.5,8.5)
+    # mass_gap = [1.040524324172413,
+    #             1.0178373805628915,
+    #             1.0099935792170385,
+    #             1.0063845297691891,
+    #             1.0064220663290975,
+    #             1.0032526281598741,
+    #             1.00326253048339]
     # lmax_vals = np.arange(1,9)
     # mass_gap = [1.907381620393867,
     #             1.715060177638449,
@@ -31,6 +31,14 @@ def main():
     #             1.6591860781893892,
     #             1.6571824919878146,
     #             1.6558575904310047]
+    
+    lmax_vals = np.arange(1.5,6.5)
+    mass_gap = [0.49520512225736013,
+                0.7468507382588818,
+                0.15955182112437782,
+                1.3509297514989633,
+                1.369775425072806]
+                
     
     """
         Note: runtimes are <1 second up to lmax=3, and then 8.9
@@ -44,27 +52,29 @@ def main():
     """
     
     plt.xlabel("lmax")
-    plt.ylabel("shifted mass gap (m/g-1)")
+    plt.ylabel("mass gap (m/g)")
     plt.title("g=1,L=2pi, antiperiodic case")
     plt.xticks(np.arange(0,lmax_vals[-1]+1,0.5))
     
+    plt.scatter(lmax_vals,mass_gap)
+    
     #plt.grid(True)
     
-    popt, pcov = curve_fit(powerlaw_offset, lmax_vals[1:], mass_gap[1:])
-    print(f"Non-linearized curve fit: {popt}")
+    # popt, pcov = curve_fit(powerlaw_offset, lmax_vals[1:], mass_gap[1:])
+    # print(f"Non-linearized curve fit: {popt}")
     
-    plt.scatter(lmax_vals,np.array(mass_gap)-1)
+    # plt.scatter(lmax_vals,np.array(mass_gap)-1)
     
-    fit_xvals = np.linspace(lmax_vals[0],lmax_vals[-1])
-    plt.loglog(fit_xvals,powerlaw_offset(fit_xvals,popt[0],popt[1],popt[2])-1,
-             label=f"Non-linearized fit: y={popt[0]:.2f}+{popt[1]:.2f}/x^{popt[2]:.2f}")
+    # fit_xvals = np.linspace(lmax_vals[0],lmax_vals[-1])
+    # plt.loglog(fit_xvals,powerlaw_offset(fit_xvals,popt[0],popt[1],popt[2])-1,
+    #          label=f"Non-linearized fit: y={popt[0]:.2f}+{popt[1]:.2f}/x^{popt[2]:.2f}")
     
-    [y0, a, n] = gradient_curvefit(lmax_vals[1:], mass_gap[1:])
-    print(f"Gradient curve fit: {[y0,a,n]}")
-    plt.loglog(fit_xvals,powerlaw_offset(fit_xvals, y0, a, n)-1,
-             label=f"Linearized fit: y={y0:.2f}+{a:.2f}/x^{n:.2f}")
+    # [y0, a, n] = gradient_curvefit(lmax_vals[1:], mass_gap[1:])
+    # print(f"Gradient curve fit: {[y0,a,n]}")
+    # plt.loglog(fit_xvals,powerlaw_offset(fit_xvals, y0, a, n)-1,
+    #          label=f"Linearized fit: y={y0:.2f}+{a:.2f}/x^{n:.2f}")
     
-    plt.legend()
+    # plt.legend()
     
     #plt.savefig('antiperiodic_mass_gap_with_fits_loglog_(Ian).pdf')
     

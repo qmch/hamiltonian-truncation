@@ -50,6 +50,7 @@ class FermionState():
         self.size = len(self.occs)
         self.nmax = nmax
         self.nmin = self.nmax - self.size + 1
+        self.isDressed = False
         self.fast = fast
         
         if fast:

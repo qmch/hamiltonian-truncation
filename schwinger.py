@@ -19,9 +19,13 @@ from statefuncs import Basis, NotInBasis, omega, State
 from oscillators import NormalOrderedOperator as NOO
 from qedops import uspinor, vspinor, FermionOperator
 from qedstatefuncs import FermionBasis, FermionState
+from dressedstatefuncs import DressedFermionBasis, DressedFermionState
+from dressedstatefuncs import ZeroModeRaisingOperator, ZeroModeLoweringOperator
+from dressedstatefuncs import calculateAxialCharge
 import collections
 import renorm
 import itertools
+from progress.bar import ChargingBar
 
 import time
 
@@ -71,9 +75,11 @@ class Schwinger():
         
         self.h0 = None
         self.potential = None
+        self.h0OffDiag = None
         self.h0Sub = None
         self.H = None
         self.V = None
+        self.h0OffDiagSub = None
 
         self.eigenvalues = None
         self.eigsrenlocal = None
@@ -89,7 +95,8 @@ class Schwinger():
         self.L=float(L)
         self.m=float(m)
         
-        self.fullBasis = FermionBasis(self.L, Emax, self.m, bcs=bcs)
+        #self.fullBasis = FermionBasis(self.L, Emax, self.m, bcs=bcs)
+        self.fullBasis = DressedFermionBasis(self.L, Emax, self.m, bcs=bcs)
 
     # TO-DO: test this method. We only have one interaction term so it's just V
     def buildBasis(self,Emax):
@@ -101,7 +108,7 @@ class Schwinger():
         the original potential matrix and free Hamiltonian.
         """
 
-        self.basis = FermionBasis(self.L, Emax, self.m, nmax=self.fullBasis.nmax,
+        self.basis = DressedFermionBasis(self.L, Emax, self.m, nmax=self.fullBasis.nmax,
                                   bcs=self.fullBasis.bcs)
         # We use the vector length (nmax) of the full basis.
         # In this way we can compare elements between the two bases
@@ -110,6 +117,8 @@ class Schwinger():
         self.V = self.potential.sub(self.basis, self.basis).M.tocoo()
 
         self.h0Sub = self.h0.sub(self.basis,self.basis).M.tocoo()
+        
+        self.h0OffDiagSub = self.h0OffDiag.sub(self.basis,self.basis).M.tocoo()
 
     def buildMatrix(self):
         """ Builds the full Hamiltonian in the basis of the free Hamiltonian eigenvectors.
@@ -230,6 +239,7 @@ class Schwinger():
         
         potential = Matrix(lookupBasis,basis)
         
+        bar = ChargingBar("States", max=basis.size)
         for state in basis:
             
             newcolumn = np.zeros(lookupBasis.size)
@@ -261,6 +271,8 @@ class Schwinger():
                             pass
             '''
             potential.addColumn(newcolumn)
+            bar.next()
+        bar.finish()
         
         potential.finalize()
         #print(potential.M.toarray())
@@ -275,6 +287,48 @@ class Schwinger():
         #     print("nonzero diagonal entries")
         
         self.potential = potential
+        
+        #off diagonal h0 elements
+        h0offdiag = Matrix(lookupBasis,basis)
+        
+        raising_op = ZeroModeRaisingOperator()
+        lowering_op = ZeroModeLoweringOperator()
+        
+        for state in basis:
+            
+            newcolumn = np.zeros(lookupBasis.size)
+            axialcharge = calculateAxialCharge(state)
+            if axialcharge == 0:
+                potential.addColumn(newcolumn)
+                pass
+            
+            for op in [raising_op,lowering_op]:
+                try:
+                    normalization, index = op.apply2(basis,state)
+                    
+                    if index != None:
+                        #this second factor is because h0 'counts' the number
+                        #of fermion insertions and adds or subtracts factors
+                        #of A1. possibly there's a minus sign here?
+                        newcolumn[index] += normalization * (-1*axialcharge)
+                except NotInBasis:
+                    pass
+            h0offdiag.addColumn(newcolumn)
+        
+        h0offdiag.finalize()
+        #print(potential.M.toarray())
+        isSymmetric = (np.array_equal(h0offdiag.M.toarray(),
+                                      h0offdiag.M.toarray().T))
+        assert isSymmetric, "Matrix not symmetric (hermitian)"
+        
+        # if isSymmetric:
+        #     print("Matrix is symmetric")
+        # 
+        # if np.any(np.diag(potential.M.toarray())):
+        #     print("nonzero diagonal entries")
+        
+        #include normalization factors of 1/sqrt(2)*1/pi^1/4
+        self.h0OffDiag = h0offdiag *(2**-0.5)*(pi**-0.25)
         # for each order (0,2,4) in phi
         """
         for n in offdiagOps.keys():
@@ -948,7 +1002,7 @@ class Schwinger():
         """
         # note: V (if using generateOperators2) is |psi^\dagger psi|^2/2k^2.
         # The 1/L factor is accounted for.
-        self.H = self.h0Sub - self.V*self.g**2
+        self.H = self.h0Sub - self.V*self.g**2 + self.h0OffDiagSub*self.g**0.5
         """
         if not(ren):
             self.H[k] = self.h0Sub[k] + self.V[k][2]*self.g2 + self.V[k][4]*self.g4

@@ -33,16 +33,18 @@ class TestSchwinger(unittest.TestCase):
         self.schwinger = Schwinger()
         self.schwinger.buildFullBasis(Emax=3., m=0, L=2*pi)
     
-    def testBasisElements(self):
-        #print(self.schwinger.fullBasis)
+    # this test was before we added zero modes. May want to rewrite with the
+    # dressed states?
+    # def testBasisElements(self):
+    #     #print(self.schwinger.fullBasis)
         
-        expectedOccs = [([0,0,0],[0,0,0]), ([0,1,0],[0,1,0]),
-                          ([1,0,0],[0,0,1]),([1,1,0],[0,1,1]),
-                          ([0,0,1],[1,0,0]),([0,1,1],[1,1,0])]
+    #     expectedOccs = [([0,0,0],[0,0,0]), ([0,1,0],[0,1,0]),
+    #                       ([1,0,0],[0,0,1]),([1,1,0],[0,1,1]),
+    #                       ([0,0,1],[1,0,0]),([0,1,1],[1,1,0])]
         
-        for i, state in enumerate(self.schwinger.fullBasis):
-            assert_array_equal(state.particleOccs,expectedOccs[i][0])
-            assert_array_equal(state.antiparticleOccs,expectedOccs[i][1])
+    #     for i, state in enumerate(self.schwinger.fullBasis):
+    #         assert_array_equal(state.particleOccs,expectedOccs[i][0])
+    #         assert_array_equal(state.antiparticleOccs,expectedOccs[i][1])
     
     def testGenerateOperators(self):
         #print(self.schwinger.fullBasis)

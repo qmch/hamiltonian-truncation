@@ -34,7 +34,7 @@ def main(argv):
     
     a = schwinger.Schwinger()
     
-    a.buildFullBasis(2*pi*R, m, Emax, bcs="periodic")
+    a.buildFullBasis(2*pi*R, m, Emax, bcs="antiperiodic")
 
     print(f"Basis size: {a.fullBasis.size}")
     if verbose:
@@ -96,7 +96,9 @@ def computeVacuumEnergy(schwinger, g):
 
     """
     sigma = -30.#-30.
-    neigs = 3
+    neigs = 10
+    
+    #print(schwinger.h0OffDiag.M.toarray())
 
     schwinger.setcouplings(g)
 

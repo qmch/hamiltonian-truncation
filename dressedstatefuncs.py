@@ -12,8 +12,18 @@ from operator import attrgetter
 import math
 from statefuncs import omega, k
 from statefuncs import State, Basis, NotInBasis
-from qedstatefuncs import FermionState, FermionBasis
+from qedstatefuncs import FermionState, FermionBasis, half_floor
 
+def calculateAxialCharge(state):
+    total = 0
+    
+    for wn in np.arange(state.nmin, state.nmax+1):
+        if wn < 0:
+            total -= (state[wn][0]-state[wn][1])
+        elif wn > 0:
+            total += (state[wn][0]-state[wn][1])
+    
+    return total
 
 class DressedFermionState(FermionState):
     
@@ -39,11 +49,13 @@ class DressedFermionState(FermionState):
         self.zeromode = zeromode
         self.omega0 = e_var/sqrt(pi)
         
+        
         FermionState.__init__(self, particleOccs, antiparticleOccs, nmax,
                                             L, m, fast, checkAtRest, checkChargeNeutral)
-        
+        self.isDressed = True
         if fast: return
-
+        
+        
         self.energy += self.zeromode * self.omega0
     
     # removed behavior checking equality of states up to parity
@@ -126,7 +138,7 @@ class DressedFermionBasis(FermionBasis):
                                              checkChargeNeutral=False)
                         if state.isNeutral():
                             statelist.append(state)
-                            addZeroModes(statelist, state.energy, newOccs)
+                            self.addZeroModes(statelist, state.energy, newOccs)
                                 
                         continue
                     else:
@@ -284,3 +296,234 @@ class DressedFermionBasis(FermionBasis):
             zeromodetemp += 1
         
         return
+    
+class ZeroModeRaisingOperator():
+    """ Raising operator for the zero mode of A1. Has similar methods to
+    FermionOperator.
+    
+    
+    """
+    def __init__(self,extracoeff=1,q=1):
+        """
+        Args:
+            clist, dlist, L, m: as above
+            extracoeff (float): an overall multiplicative prefactor for the
+                operator, *written as a power of the field operator phi*
+            normed (bool): indicates whether factor of 1/sqrt(2*omega) has
+                been absorbed into the definition of the spinor wavefunctions
+        """
+        
+        self.coeff = extracoeff
+        # coeff converts the overall prefactor of phi (extracoeff) to a prefactor
+        # for the string of creation and annihilation operators in the final operator
+        # see the normalization in Eq. 2.6
+        # if normed:
+        #     self.coeff = extracoeff
+        # else:
+        #     self.coeff = extracoeff/product([sqrt(2.*L*omega(n,L,m))
+        #                                      for n in clist+dlist])
+
+        self.deltaE = q/sqrt(pi)
+    
+    def __repr__(self):
+        return f"{extracoeff}*a^dagger"
+    
+    def _transformState(self, state0, returnCoeff=False):
+        """
+        Applies the normal ordered operator to a given state.
+        
+        Args:
+            state0 (State): an input DressedFermionState for this operator
+            returncoeff (bool): boolean representing whether or not to
+                include the factor self.coeff with the returned state
+        
+        Returns:
+            A tuple representing the input state after being acted on by
+            the normal-ordered operator and any multiplicative factors
+            from performing the commutations.
+            
+        """
+        #make a copy of this state up to occupation numbers and nmax
+        #use DressedFermionState if the original state is dressed
+        #otherwise use FermionState
+        assert state0.isDressed, "State has no zero mode"
+        state = DressedFermionState(particleOccs=state0.occs[:,0],
+                                 antiparticleOccs=state0.occs[:,1],
+                                 zeromode=state0.getAZeroMode(),
+                                 nmax=state0.nmax,
+                                 fast=True)
+        
+        # note: there may be an easier way for fermionic states
+        # however, these loops are short and fast, so NumPy shortcuts probably
+        # will not provide too much speed-up at this level.
+        
+        norm = sqrt(state.getAZeroMode()+1)
+        
+        state.setAZeroMode(state.getAZeroMode()+1)
+        # if returnCoeff:
+        #     return (norm*self.coeff, state)
+        return (norm, state)
+
+    def apply(self, basis, i, lookupbasis=None):
+        """ Takes a state index in basis, returns another state index (if it
+        belongs to the lookupbasis) and a proportionality coefficient. Otherwise raises NotInBasis.
+        lookupbasis can be different from basis, but it's assumed that they have the same nmax
+        
+        This is not updated for dressed states.
+        """
+        if lookupbasis == None:
+            lookupbasis = basis
+        if self.deltaE+basis[i].energy < 0.-tol or self.deltaE+basis[i].energy > lookupbasis.Emax+tol:
+            # The transformed element surely does not belong to the basis if E>Emax or E<0
+            raise NotInBasis()
+        # apply the normal-order operator to this basis state
+        n, newstate = self._transformState(basis[i])
+        #if the state was annihilated by the operator, return (0, None)
+        if n==0:
+            return (0, None)
+        # otherwise, look up this state in the lookup basis
+        norm, j = lookupbasis.lookup(newstate)
+        c = 1.
+        #if basis[i].isParityEigenstate():
+        #    c = 1/sqrt(2.)
+            # Required for state normalization
+        # return the overall proportionality and the state index
+        return (norm*c*sqrt(n)*self.coeff, j)
+    
+    def apply2(self, basis, state, lookupbasis=None):
+        """
+        Like apply but with a state as input rather than an index in the
+        original basis.
+        """
+        # TO-DO: add the energy shortcut from the original apply
+        # we need the energy of the state-- is it expensive to recompute it?
+        if lookupbasis == None:
+            lookupbasis = basis
+        
+        n, newstate = self._transformState(state)
+        
+        if n==0:
+            return (0, None)
+        
+        norm, j = lookupbasis.lookup(newstate)
+        
+        c = 1.
+        #no sqrt n since n is either 1 or -1
+        return (norm*c*n*self.coeff,j)
+    
+class ZeroModeLoweringOperator():
+    """ Lowering operator for the zero mode of A1. Has similar methods to
+    FermionOperator.
+    
+    
+    """
+    def __init__(self,extracoeff=1,q=1):
+        """
+        Args:
+            clist, dlist, L, m: as above
+            extracoeff (float): an overall multiplicative prefactor for the
+                operator, *written as a power of the field operator phi*
+            normed (bool): indicates whether factor of 1/sqrt(2*omega) has
+                been absorbed into the definition of the spinor wavefunctions
+        """
+        
+        self.coeff = extracoeff
+        # coeff converts the overall prefactor of phi (extracoeff) to a prefactor
+        # for the string of creation and annihilation operators in the final operator
+        # see the normalization in Eq. 2.6
+        # if normed:
+        #     self.coeff = extracoeff
+        # else:
+        #     self.coeff = extracoeff/product([sqrt(2.*L*omega(n,L,m))
+        #                                      for n in clist+dlist])
+
+        self.deltaE = q/sqrt(pi)
+    
+    def __repr__(self):
+        return f"{extracoeff}*a"
+    
+    def _transformState(self, state0, returnCoeff=False):
+        """
+        Applies the normal ordered operator to a given state.
+        
+        Args:
+            state0 (State): an input DressedFermionState for this operator
+            returncoeff (bool): boolean representing whether or not to
+                include the factor self.coeff with the returned state
+        
+        Returns:
+            A tuple representing the input state after being acted on by
+            the normal-ordered operator and any multiplicative factors
+            from performing the commutations.
+            
+        """
+        #make a copy of this state up to occupation numbers and nmax
+        #use DressedFermionState if the original state is dressed
+        #otherwise use FermionState
+        assert state0.isDressed, "State has no zero mode"
+        state = DressedFermionState(particleOccs=state0.occs[:,0],
+                                 antiparticleOccs=state0.occs[:,1],
+                                 zeromode=state0.getAZeroMode(),
+                                 nmax=state0.nmax,
+                                 fast=True)
+        
+        # note: there may be an easier way for fermionic states
+        # however, these loops are short and fast, so NumPy shortcuts probably
+        # will not provide too much speed-up at this level.
+        
+        if state.getAZeroMode() == 0:
+            return (0, None)
+        
+        norm = sqrt(state.getAZeroMode())
+        
+        state.setAZeroMode(state.getAZeroMode()-1)
+        # if returnCoeff:
+        #     return (norm*self.coeff, state)
+        return (norm, state)
+
+    def apply(self, basis, i, lookupbasis=None):
+        """ Takes a state index in basis, returns another state index (if it
+        belongs to the lookupbasis) and a proportionality coefficient. Otherwise raises NotInBasis.
+        lookupbasis can be different from basis, but it's assumed that they have the same nmax
+        
+        This is not updated for dressed states.
+        """
+        if lookupbasis == None:
+            lookupbasis = basis
+        if self.deltaE+basis[i].energy < 0.-tol or self.deltaE+basis[i].energy > lookupbasis.Emax+tol:
+            # The transformed element surely does not belong to the basis if E>Emax or E<0
+            raise NotInBasis()
+        # apply the normal-order operator to this basis state
+        n, newstate = self._transformState(basis[i])
+        #if the state was annihilated by the operator, return (0, None)
+        if n==0:
+            return (0, None)
+        # otherwise, look up this state in the lookup basis
+        norm, j = lookupbasis.lookup(newstate)
+        c = 1.
+        #if basis[i].isParityEigenstate():
+        #    c = 1/sqrt(2.)
+            # Required for state normalization
+        # return the overall proportionality and the state index
+        return (norm*c*sqrt(n)*self.coeff, j)
+    
+    def apply2(self, basis, state, lookupbasis=None):
+        """
+        Like apply but with a state as input rather than an index in the
+        original basis.
+        """
+        # TO-DO: add the energy shortcut from the original apply
+        # we need the energy of the state-- is it expensive to recompute it?
+        if lookupbasis == None:
+            lookupbasis = basis
+        
+        n, newstate = self._transformState(state)
+        
+        if n==0:
+            return (0, None)
+        
+        norm, j = lookupbasis.lookup(newstate)
+        
+        c = 1.
+        #no sqrt n since n is either 1 or -1
+        return (norm*c*n*self.coeff,j)
